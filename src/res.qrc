@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/">
+        <file>PointCloud/shaders/distribute.cs</file>
+        <file>PointCloud/shaders/reproject.fs</file>
+        <file>PointCloud/shaders/reproject.vs</file>
+        <file>PointCloud/images/gradient_spectral_2d.png</file>
+        <file>PointCloud/shaders/fill.fs</file>
+        <file>PointCloud/shaders/fill.vs</file>
+        <file>PointCloud/shaders/create_vbo.cs</file>
+        <file>PointCloud/shaders/edl.fs</file>
+        <file>PointCloud/shaders/edl.vs</file>
+        <file>PointCloud/shaders/edlMSAA.fs</file>
+        <file>PointCloud/shaders/distribute_attribute.cs</file>
+        <file>PointCloud/images/cancel.png</file>
+        <file>PointCloud/images/check_active.png</file>
+        <file>PointCloud/images/check_deactive.png</file>
+        <file>PointCloud/images/polygon_in.png</file>
+        <file>PointCloud/images/polygon_out.png</file>
+        <file>PointCloud/images/segement.png</file>
+        <file>PointCloud/shaders/select.cs</file>
+    </qresource>
+</RCC>
