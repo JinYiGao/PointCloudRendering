@@ -69,15 +69,15 @@ public:
 	// 设置uniform块变量
 	//template <typename T>
 	/*typename std::enable_if <std::is_same<int, T>::value || std::is_same<float, T>::value || std::is_same<uint, T>::value, void >::type*/
-	void setUniformBlockValue(vector<UniformBlock*> *uniformBlocks, const char *BlockName, const char *valueName, void* value) {
+	void setUniformBlockValue(vector<UniformBlock*> &uniformBlocks, const char *BlockName, const char *valueName, void* value) {
 		UniformBlock *ubo = nullptr;
 		GLint uboSize;
 		GLuint uboIndex;
 		GLint ubobinding;
 		bool find = false;
-		for (int i = 0; i < uniformBlocks->size(); i++) {
-			if ((*uniformBlocks)[i]->name == BlockName) {
-				ubo = (*uniformBlocks)[i];
+		for (int i = 0; i < uniformBlocks.size(); i++) {
+			if (uniformBlocks[i]->name == BlockName) {
+				ubo = uniformBlocks[i];
 				find = true;
 				break;
 			}
@@ -90,9 +90,9 @@ public:
 			// 分配空间
 			glNamedBufferData(ubo->buffer, uboSize, nullptr, GL_DYNAMIC_DRAW);
 
-			uniformBlocks->emplace_back(ubo);
+			uniformBlocks.emplace_back(ubo);
 		}
-
+	
 		uboIndex = glGetUniformBlockIndex(this->programId, BlockName);
 		// 查询uniform block绑定位
 		glGetActiveUniformBlockiv(this->programId, uboIndex, GL_UNIFORM_BLOCK_BINDING, &ubobinding);

@@ -1,6 +1,9 @@
 #version 450
-
 #extension GL_NV_gpu_shader5 : enable
+
+// **************************************************
+// 用于按照一定规则选取点云子集(例如 裁剪区域选取...)
+// **************************************************
 
 #define InPolygon 0
 #define OutPolygon 1
@@ -16,6 +19,7 @@ struct Point{
     float x;
     float y;
 };
+// 标准化设备坐标 多边形buffer
 layout(std430, binding = 0) buffer Polygon{
     int num;
     Point polygon[];
@@ -28,7 +32,7 @@ struct VertexS{
 	uint color;
 	int show;
 };
-
+// 点云数据存储buffer
 layout(std430, binding = 3) buffer ssSource0{
 	VertexS vbo0[];
 };
@@ -61,14 +65,10 @@ layout(std430, binding = 10) buffer ssSource7{
 	VertexS vbo7[];
 };
 
+// 判断点是否在多边形内
 bool inPolygon(vec4 pos){
     vec4 position = transform * pos;
     vec4 point = position / position.w;
-    // if(position.x > polygon[0].x){
-    //     return true;
-    // }
-    // return false;
-
     bool inPolygon = false;
     for (int i = 0, j = num - 1; i < num; j = i++)
     {
@@ -101,43 +101,43 @@ void main() {
 		vs = vbo1[index - 1u * maxPointsPerBuffer];
         if(inPolygon(vec4(vs.ux, vs.uy, vs.uz, 1.0))){
             vs.show = 0;
-            vbo0[index - 1u * maxPointsPerBuffer] = vs;
+            vbo1[index - 1u * maxPointsPerBuffer] = vs;
         }
 	}else if(index < 3u * maxPointsPerBuffer){
 		vs = vbo2[index - 2u * maxPointsPerBuffer];
         if(inPolygon(vec4(vs.ux, vs.uy, vs.uz, 1.0))){
             vs.show = 0;
-            vbo0[index - 2u * maxPointsPerBuffer] = vs;
+            vbo2[index - 2u * maxPointsPerBuffer] = vs;
         }
 	}else if(index < 4u * maxPointsPerBuffer){
 		vs = vbo3[index - 3u * maxPointsPerBuffer];
         if(inPolygon(vec4(vs.ux, vs.uy, vs.uz, 1.0))){
             vs.show = 0;
-            vbo0[index - 3u * maxPointsPerBuffer] = vs;
+            vbo3[index - 3u * maxPointsPerBuffer] = vs;
         }
 	}else if(index < 5u * maxPointsPerBuffer){
 		vs = vbo4[index - 4u * maxPointsPerBuffer];
         if(inPolygon(vec4(vs.ux, vs.uy, vs.uz, 1.0))){
             vs.show = 0;
-            vbo0[index - 4u * maxPointsPerBuffer] = vs;
+            vbo4[index - 4u * maxPointsPerBuffer] = vs;
         }
 	}else if(index < 6u * maxPointsPerBuffer){
 		vs = vbo5[index - 5u * maxPointsPerBuffer];
         if(inPolygon(vec4(vs.ux, vs.uy, vs.uz, 1.0))){
             vs.show = 0;
-            vbo0[index - 5u * maxPointsPerBuffer] = vs;
+            vbo5[index - 5u * maxPointsPerBuffer] = vs;
         }
 	}else if(index < 7u * maxPointsPerBuffer){
 		vs = vbo6[index - 6u * maxPointsPerBuffer];
         if(inPolygon(vec4(vs.ux, vs.uy, vs.uz, 1.0))){
             vs.show = 0;
-            vbo0[index - 6u * maxPointsPerBuffer] = vs;
+            vbo6[index - 6u * maxPointsPerBuffer] = vs;
         }
 	}else if(index < 8u * maxPointsPerBuffer){
 		vs = vbo7[index - 7u * maxPointsPerBuffer];
         if(inPolygon(vec4(vs.ux, vs.uy, vs.uz, 1.0))){
             vs.show = 0;
-            vbo0[index - 7u * maxPointsPerBuffer] = vs;
+            vbo7[index - 7u * maxPointsPerBuffer] = vs;
         }
 	}
 }

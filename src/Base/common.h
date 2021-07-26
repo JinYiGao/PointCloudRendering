@@ -6,6 +6,8 @@
  * @LastEditors: JinYiGao
  * @LastEditTime: 2021-07-01 13:38:03
  */
+#pragma once
+
 #include <iostream>
 #include <Eigen/Eigen>
 
@@ -13,7 +15,7 @@ typedef Eigen::AlignedBox3f BoundingBox3f;
 
 // 扩充一些额外的类型定义, uint8_t , uint16_t , uint32_t 
 namespace Eigen {
-
+	
 	/** \defgroup matrixtypedefs Global matrix typedefs
 	 *
 	 * \ingroup Core_Module

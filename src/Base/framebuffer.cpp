@@ -23,6 +23,10 @@ FrameBuffer::FrameBuffer() {
 	setSize(512, 512);
 }
 
+void FrameBuffer::bind() {
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+}
+
 void FrameBuffer::setNumColorAttachments(int numColorAttachments) {
 	if (numColorAttachments == this->numColorAttachments) {
 		return;

@@ -15,6 +15,9 @@ PointCloud read_las(string path) {
 	int64_t start = Now_ms();
 	PointCloud pcd;
 
+	QFileInfo info(QString::fromStdString(path));
+	pcd.name = info.fileName().toStdString();
+
 	laszip_POINTER reader;
 	laszip_create(&reader); 
 
@@ -121,6 +124,10 @@ PointCloud read_las(string path) {
 	pcd.boundingBox.extend(maxp);
 
 	pcd.points_num = points_num;
+
+	// Max Min Idensity
+	pcd.setmaxIdensity(pcd.intensity.rowwise().maxCoeff()(0, 0));
+	pcd.setminIdensity(pcd.intensity.rowwise().minCoeff()(0, 0));
 
 	int64_t end = Now_ms();
 	std::cout << "Time of Load File: "<< end - start << "ms" << std::endl;

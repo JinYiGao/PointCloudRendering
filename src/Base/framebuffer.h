@@ -31,6 +31,8 @@ public:
 public:
 	FrameBuffer();
 
+	void bind(); // 绑定到当前framebuffer
+
 	void setNumColorAttachments(int numColorAttachments); // 设置需要的颜色附件数量
 	void setSamples(int samples); // 设置样本数
 	void setSize(float width, float height); // 设置帧缓冲大小

@@ -130,7 +130,7 @@ public:
 
 	//记录下平移前鼠标位置
 	Vector2f M_start_translate = {0.0f,0.0f};
-	float sensitivity = 0.001;
+	float sensitivity = 0.002;
 
 	//是否正在旋转
 	bool is_rotate = false;

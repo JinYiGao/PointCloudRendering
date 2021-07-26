@@ -1,5 +1,11 @@
 #version 450 core
 
+#define ATT_MODE_SCALAR 0
+#define ATT_MODE_VECTOR 1 // 展示原始RGB
+#define SHOW_COLORFROMLABEL 2 // 根据分类展示颜色
+#define SHOW_COLORFROMIDENSITY 3 // 根据强度展示颜色
+#define NOT_SHOW_COLOR 4 // 不展示颜色
+
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in int aValue;
 layout(location = 2) in int show;
@@ -7,7 +13,6 @@ layout(location = 2) in int show;
 uniform mat4 uWorldViewProj;
 uniform int uOffset; // 当前渲染的缓冲区在整个点云缓冲区中的偏移(由于缓冲区分块的原因)
 uniform float pointSize;
-
 
 layout(binding = 0) uniform sampler2D uGradient;
 
@@ -19,12 +24,6 @@ layout(std140, binding = 1) uniform colorStrip{
 }colorstrip;
 
 uniform int uAttributeMode;
-
-#define ATT_MODE_SCALAR 0
-#define ATT_MODE_VECTOR 1
-#define NOT_SHOW_COLOR 2
-#define SHOW_COLORFROMLABEL 3
-#define SHOW_COLORFROMIDENSITY 4
 
 out vec3 vColor;
 out vec4 vVertexID;

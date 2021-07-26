@@ -8,6 +8,7 @@
  */
 #pragma once
 #include <iostream>
+#include <QFileInfo>
 #include <PointCloud/pointclouds.h>
 #include <Base/utils.h>
 

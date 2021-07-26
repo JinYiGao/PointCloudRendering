@@ -1,5 +1,11 @@
 #version 450 core
 
+#define ATT_MODE_SCALAR 0
+#define ATT_MODE_VECTOR 1
+#define SHOW_COLORFROMLABEL 2
+#define SHOW_COLORFROMIDENSITY 3
+#define NOT_SHOW_COLOR 4
+
 layout(location = 0) in vec3 aPosition; // 顶点位置
 layout(location = 1) in int aValue; // color or Attribute
 layout(location = 2) in int aIndex;
@@ -8,12 +14,6 @@ layout(location = 3) in int show;
 uniform mat4 uWorldViewProj; // 转换矩阵proj * view * model
 uniform int uAttributeMode; // 颜色读取模式 0 or 1
 uniform float pointSize;
-
-#define ATT_MODE_SCALAR 0
-#define ATT_MODE_VECTOR 1
-#define NOT_SHOW_COLOR 2
-#define SHOW_COLORFROMLABEL 3
-#define SHOW_COLORFROMIDENSITY 4
 
 layout(binding = 0) uniform sampler2D uGradient;
 
@@ -101,7 +101,6 @@ vec3 getColorFromIdensity(){
 }
 
 void main() {
-	
 	gl_Position = uWorldViewProj * vec4(aPosition, 1.0);
 	gl_PointSize = pointSize;
 

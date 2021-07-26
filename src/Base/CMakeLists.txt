@@ -5,4 +5,4 @@ SOURCE_GROUP("source" FILES ${SOURCES})
 
 add_library(base ${SOURCES} ${HEADER})
 
-target_link_libraries(base Qt5::Core Qt5::Widgets Qt5::Gui)
+target_link_libraries(base Qt5::Core Qt5::Widgets Qt5::Gui pointcloud)

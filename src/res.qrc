@@ -16,7 +16,9 @@
         <file>PointCloud/images/check_deactive.png</file>
         <file>PointCloud/images/polygon_in.png</file>
         <file>PointCloud/images/polygon_out.png</file>
-        <file>PointCloud/images/segement.png</file>
+        <file>PointCloud/images/segment.png</file>
         <file>PointCloud/shaders/select.cs</file>
+        <file>PointCloud/images/segment_deactive.png</file>
+        <file>PointCloud/images/polygonSelect.png</file>
     </qresource>
 </RCC>

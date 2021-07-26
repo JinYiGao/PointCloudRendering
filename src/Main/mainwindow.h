@@ -20,6 +20,8 @@
 #include <QIcon>
 
 #include <IO/lasio.h>
+#include <Main/DBRoot.h>
+#include <Main/segmentationwidget.h>
 #include <PointCloud/renderingWidget.h>
 
 namespace Ui {
@@ -36,35 +38,24 @@ public:
 
 public slots:
 	void openfile();
+
 	void isEDLChecked();
-	void notShowColor();
 	void changeMSAA();
-	void showColorFromLabel();
-	void showColorFromIdensity();
-	void showColorFromRGB();
-	void changePointSize(int value);
+
 	void start_segement();
-	void cancel_segement();
-	void inPolygon_segement();
-	void outPolygon_segement();
-	void check_segement();
+
+	void enableUIItems();
 
 private:
-    Ui::MainWindow *ui;
-	QButtonGroup *checkBoxGroup = nullptr;
-
-	QToolButton *toolbtn_segement = new QToolButton(this);
-	QToolButton *toolbtn_inPolygon = new QToolButton(this);
-	QToolButton *toolbtn_outPolygon = new QToolButton(this);
-	QToolButton *toolbtn_cancel = new QToolButton(this);
-	QToolButton *toolbtn_check = new QToolButton(this);
-
-private:
-	Eigen::MatrixXf getColorStrip(); // 生成色带
+	QToolButton *toolbtn_segment = new QToolButton(this);
 
 public:
-	PointCloud *pcd = new PointCloud();
+	Ui::MainWindow *ui;
+	SegmentationWidget *segmentationWidget = nullptr;
+
 	RenderWidget *renderWidget = nullptr;
+	PcdTreeWidget *pcdTreeWidget = nullptr;
+	DBRoot *dbRoot = nullptr;
 };
 
 #endif // MAINWINDOW_H

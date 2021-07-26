@@ -34,6 +34,10 @@ layout(std430, binding = 5) buffer ssTargetBuffer3{
 	Vertex targetBuffer3[];
 };
 
+layout(std430, binding = 6) buffer ssTargetBuffer4{
+	Vertex targetBuffer4[];
+};
+
 layout(location = 2) uniform int uNumPoints;
 layout(location = 3) uniform int uPrime;
 layout(location = 4) uniform int uOffset;
@@ -96,6 +100,11 @@ void main(){
 		Vertex v = targetBuffer3[targetIndex];
 		v.value = value;
 		targetBuffer3[targetIndex] = v;
+	}else if(targetIndex < 5 * MaxPointsPerBuffer){
+		targetIndex = targetIndex - 4 * MaxPointsPerBuffer;
+		Vertex v = targetBuffer4[targetIndex];
+		v.value = value;
+		targetBuffer4[targetIndex] = v;
 	}
 }
 

@@ -15,26 +15,26 @@
 using namespace std::chrono;
 
 static int Now_seconds() {
-	system_clock::time_point time_point_now = system_clock::now(); // »ñÈ¡µ±Ç°Ê±¼äµã
-	system_clock::duration duration_since_epoch = time_point_now.time_since_epoch(); // ´Ó1970-01-01 00:00:00µ½µ±Ç°Ê±¼äµãµÄÊ±³¤
-	time_t microseconds_since_epoch = duration_cast<microseconds>(duration_since_epoch).count(); // ½«Ê±³¤×ª»»ÎªÎ¢ÃëÊı
-	time_t seconds_since_epoch = microseconds_since_epoch / 1000000; // ½«Ê±³¤×ª»»ÎªÃëÊı
-	std::tm current_time = *std::localtime(&seconds_since_epoch); // »ñÈ¡µ±Ç°Ê±¼ä£¨¾«È·µ½Ãë£©
+	system_clock::time_point time_point_now = system_clock::now(); // è·å–å½“å‰æ—¶é—´ç‚¹
+	system_clock::duration duration_since_epoch = time_point_now.time_since_epoch(); // ä»1970-01-01 00:00:00åˆ°å½“å‰æ—¶é—´ç‚¹çš„æ—¶é•¿
+	time_t microseconds_since_epoch = duration_cast<microseconds>(duration_since_epoch).count(); // å°†æ—¶é•¿è½¬æ¢ä¸ºå¾®ç§’æ•°
+	time_t seconds_since_epoch = microseconds_since_epoch / 1000000; // å°†æ—¶é•¿è½¬æ¢ä¸ºç§’æ•°
+	std::tm current_time = *std::localtime(&seconds_since_epoch); // è·å–å½“å‰æ—¶é—´ï¼ˆç²¾ç¡®åˆ°ç§’ï¼‰
 	return current_time.tm_sec;
 }
 
 static int64_t Now_us() {
-	system_clock::time_point time_point_now = system_clock::now(); // »ñÈ¡µ±Ç°Ê±¼äµã
-	system_clock::duration duration_since_epoch = time_point_now.time_since_epoch(); // ´Ó1970-01-01 00:00:00µ½µ±Ç°Ê±¼äµãµÄÊ±³¤
-	time_t microseconds_since_epoch = duration_cast<microseconds>(duration_since_epoch).count(); // ½«Ê±³¤×ª»»ÎªÎ¢ÃëÊı
+	system_clock::time_point time_point_now = system_clock::now(); // è·å–å½“å‰æ—¶é—´ç‚¹
+	system_clock::duration duration_since_epoch = time_point_now.time_since_epoch(); // ä»1970-01-01 00:00:00åˆ°å½“å‰æ—¶é—´ç‚¹çš„æ—¶é•¿
+	time_t microseconds_since_epoch = duration_cast<microseconds>(duration_since_epoch).count(); // å°†æ—¶é•¿è½¬æ¢ä¸ºå¾®ç§’æ•°
 	return microseconds_since_epoch;
 }
 
 static int64_t Now_ms() {
-	system_clock::time_point time_point_now = system_clock::now(); // »ñÈ¡µ±Ç°Ê±¼äµã
-	system_clock::duration duration_since_epoch = time_point_now.time_since_epoch(); // ´Ó1970-01-01 00:00:00µ½µ±Ç°Ê±¼äµãµÄÊ±³¤
-	time_t microseconds_since_epoch = duration_cast<microseconds>(duration_since_epoch).count(); // ½«Ê±³¤×ª»»ÎªÎ¢ÃëÊı
-	time_t tm_millisec = microseconds_since_epoch / 1000; // ºÁÃëÊı
+	system_clock::time_point time_point_now = system_clock::now(); // è·å–å½“å‰æ—¶é—´ç‚¹
+	system_clock::duration duration_since_epoch = time_point_now.time_since_epoch(); // ä»1970-01-01 00:00:00åˆ°å½“å‰æ—¶é—´ç‚¹çš„æ—¶é•¿
+	time_t microseconds_since_epoch = duration_cast<microseconds>(duration_since_epoch).count(); // å°†æ—¶é•¿è½¬æ¢ä¸ºå¾®ç§’æ•°
+	time_t tm_millisec = microseconds_since_epoch / 1000; // æ¯«ç§’æ•°
 	return tm_millisec;
 }
 
@@ -48,47 +48,3 @@ static double now() {
 	return secondsSinceStart;
 }
 
-
-// ¸ù¾İOpenGL Type±àÂë»ñÈ¡ÀàĞÍÕ¼×Ö½Ú
-static size_t TypeSize(GLenum type)
-{
-	size_t size;
-
-#define CASE(Enum, Count, Type) \
-case Enum: size = Count * sizeof(Type); break
-
-	switch (type) {
-		CASE(GL_FLOAT, 1, GLfloat);
-		CASE(GL_FLOAT_VEC2, 2, GLfloat);
-		CASE(GL_FLOAT_VEC3, 3, GLfloat);
-		CASE(GL_FLOAT_VEC4, 4, GLfloat);
-		CASE(GL_INT, 1, GLint);
-		CASE(GL_INT_VEC2, 2, GLint);
-		CASE(GL_INT_VEC3, 3, GLint);
-		CASE(GL_INT_VEC4, 4, GLint);
-		CASE(GL_UNSIGNED_INT, 1, GLuint);
-		CASE(GL_UNSIGNED_INT_VEC2, 2, GLuint);
-		CASE(GL_UNSIGNED_INT_VEC3, 3, GLuint);
-		CASE(GL_UNSIGNED_INT_VEC4, 4, GLuint);
-		CASE(GL_BOOL, 1, GLboolean);
-		CASE(GL_BOOL_VEC2, 2, GLboolean);
-		CASE(GL_BOOL_VEC3, 3, GLboolean);
-		CASE(GL_BOOL_VEC4, 4, GLboolean);
-		CASE(GL_FLOAT_MAT2, 4, GLfloat);
-		CASE(GL_FLOAT_MAT2x3, 6, GLfloat);
-		CASE(GL_FLOAT_MAT2x4, 8, GLfloat);
-		CASE(GL_FLOAT_MAT3, 9, GLfloat);
-		CASE(GL_FLOAT_MAT3x2, 6, GLfloat);
-		CASE(GL_FLOAT_MAT3x4, 12, GLfloat);
-		CASE(GL_FLOAT_MAT4, 16, GLfloat);
-		CASE(GL_FLOAT_MAT4x2, 8, GLfloat);
-		CASE(GL_FLOAT_MAT4x3, 12, GLfloat);
-#undef CASE
-	default:
-		fprintf(stderr, "Unknown type: 0x%x\n", type);
-		exit(EXIT_FAILURE);
-		break;
-	}
-
-	return size;
-}
