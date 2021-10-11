@@ -8,7 +8,9 @@
  */
 #pragma once
 #include <Eigen/Eigen>
+#include <Base/common.h>
 #include <tuple>
+#include <iostream>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846264338327950288
@@ -79,8 +81,9 @@ struct Arcball {
 			if (tx * tx + ty * ty > 1.0f)
 				angle *= 1.0f + 0.2f * (std::sqrt(tx * tx + ty * ty) - 1.0f);
 			mIncr = Eigen::AngleAxisf(angle, axis.normalized());
-			if (!std::isfinite(mIncr.norm()))
+			if (!std::isfinite(mIncr.norm())) {
 				mIncr = Quaternionf::Identity();
+			}
 		}
 		return true;
 	}
@@ -116,25 +119,28 @@ public:
 	float zoom = 1.0f;
 
 	//控制projection矩阵
-	float view_angle = 5.0f;//fov上下视野角度 设置初始视图
-	float znear = 0.1f, zfar = 100.0f;//近截面 远截面
+	float view_angle = 30.0f;//fov上下视野角度 设置初始视图
+	float znear = 0.1f, zfar = 1000.0f;//近截面 远截面
 
 	//图形显示屏幕大小
 	Eigen::Vector2i size = { 800, 600 };
 
 	//是否采用正射投影
-	bool is_ortho = false;
+	bool is_ortho = true;
 
 	//是否正在平移
 	bool is_translate = false;
 
 	//记录下平移前鼠标位置
 	Vector2f M_start_translate = {0.0f,0.0f};
-	float sensitivity = 0.002;
+	float sensitivity = 0.001;
 
 	//是否正在旋转
 	bool is_rotate = false;
+
+	BoundingBox3f scene_bbox;
 	
+	Eigen::Matrix4f preTransform = Eigen::Matrix4f::Identity();
 
 	//------------观察矩阵 (View)-------------
 	//----------------------------------------
@@ -160,6 +166,9 @@ public:
 	//--------------------------------
 	Eigen::Matrix4f frustum(float left, float right, float bottom, float top, float nearVal, float farVal);
 
+	// 设置预定义的转换矩阵
+	void setPreTransform(Eigen::Matrix4f);
+
 	//-------------------------------
 	// 获取 model: 模型矩阵
 	//      view : 相机观察矩阵
@@ -172,6 +181,8 @@ public:
 
 	///\brief 获得最后的转换矩阵
 	Eigen::Matrix4f getTransform();
+
+	Eigen::Vector3f convert_2dTo3d(const Eigen::Vector2f &screen_point);
 
 	///\brief 开始平移
 	void start_translate(const Vector2f &screen_point);

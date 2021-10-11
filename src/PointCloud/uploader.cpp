@@ -11,12 +11,12 @@
 uint64_t previousPrimeCongruent3mod4(uint64_t start);
 
 // 构造函数
-UpLoader::UpLoader(PointCloud *pcd) {
+UpLoader::UpLoader(std::shared_ptr<PointCloud> &pcd) {
 	this->pcd = pcd;
 
 	// 初始化
 	initializeOpenGLFunctions();
-
+	
 	prime = previousPrimeCongruent3mod4(pcd->points_num); // 根据点云数量生成一个最大质数
 	
 	// 点云数量太大时 创建多个顶点缓冲区
@@ -39,6 +39,10 @@ UpLoader::UpLoader(PointCloud *pcd) {
 		pointsLeft -= numPointsInBuffer;
 	}
 
+	// 开辟一个缓冲区用于存储打乱后索引
+	glCreateBuffers(1, &indexBuffer);
+	glNamedBufferData(indexBuffer, pcd->points_num * 4, nullptr, usage);
+
 	// 为单个chunk开辟缓冲区 用于分批填入点云xyzrgba数据 上传数据进行位置分配计算
 	uint32_t chunkSize = defaultChunkSize * bytesPerBuffer;
 	glCreateBuffers(1, &Chunk16B);
@@ -53,13 +57,27 @@ UpLoader::UpLoader(PointCloud *pcd) {
 
 	// 上载点数据至gpu
 	int64_t start = Now_ms();
-	//while (!isDone()) {
-	//	uploadNextChunk();
-	//	//std::cout << "pointsUploaded: " << pointsUploaded << std::endl;
-	//}
 	uploadData();
 	int64_t end = Now_ms();
 	std::cout << "Time of UpLoad To GPU: " << end - start << "ms" << std::endl;
+
+	// 读取打乱后索引 至pcd内
+	void *data = glMapNamedBuffer(indexBuffer, GL_READ_WRITE);
+	memcpy(pcd->indexTable, data, 4 *pcd->points_num);
+	glUnmapNamedBuffer(indexBuffer);
+	int64_t end2 = Now_ms();
+	std::cout << "Time of Read IndexTable: " << end2 - end << "ms" << std::endl;
+}
+
+UpLoader::~UpLoader() {
+	delete csShader;
+	delete csShader_Attribute;
+	for (int i = 0; i < vertexBuffers.size(); i++) {
+		glDeleteBuffers(1, &vertexBuffers[i]);
+	}
+	glDeleteBuffers(1, &indexBuffer);
+	glDeleteBuffers(1, &Chunk16B);
+	glDeleteBuffers(1, &Chunk4B);
 }
 
 // 上载数据 一次上传单个chunk
@@ -101,7 +119,7 @@ int UpLoader::uploadNextChunk() {
 	for (int i = 0; i < vertexBuffers.size(); i++) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2 + i, 0);
 	}
-	csShader->release(); // 解绑着色器
+	csShader->unbind(); // 解绑着色器
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 	pointsUploaded += xyzrgba.cols();
 
@@ -135,6 +153,7 @@ Eigen::MatrixXf UpLoader::getNextChunk() {
 	return xyzrgba;
 }
 
+// 上载数据 调用完成则所有数据上传完成
 int UpLoader::uploadData() {
 	Eigen::MatrixXf xyzrgba = getData();
 	if (xyzrgba.rows() <= 0) {
@@ -161,6 +180,9 @@ int UpLoader::uploadData() {
 		for (int j = 0; j < vertexBuffers.size(); j++) {
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, j + 2, vertexBuffers[j]);
 		}
+
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, indexBuffer);
+
 		csShader->setUniformValue("MaxPointsPerBuffer", maxPointsPerBuffer);
 		csShader->setUniformValue("uNumPoints", chunkSize);
 		int uPrime = prime;
@@ -177,7 +199,8 @@ int UpLoader::uploadData() {
 		for (int j = 0; j < vertexBuffers.size(); j++) {
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2 + j, 0);
 		}
-		csShader->release(); // 解绑着色器
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 10, 0);
+		csShader->unbind(); // 解绑着色器
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
 		pointsUploaded += chunkSize;
 		//std::cout <<"PointsUploaded: " << pointsUploaded << std::endl;
@@ -209,6 +232,8 @@ Eigen::MatrixXf UpLoader::getData() {
 	xyzrgba << xyz,
 		i2f,
 		i4B2f;
+
+	//xyzrgba = mergeMatrixUpDown(mergeMatrixUpDown(xyz, i2f), i4B2f);
 	return xyzrgba;
 }
 
@@ -226,8 +251,8 @@ int UpLoader::uploadChunkAttribute(void *data, int offset, int size) {
 	}
 	int targetOffset = offset; // 上传属性的起始偏移
 	int Size = size; // 上传数据个数
-	int num = size / defaultChunkSize; // 需要分批上传次数
-	if (num % defaultChunkSize == 0) {
+	int num = size / defaultChunkSize + 1; // 需要分批上传次数
+	if (size % defaultChunkSize == 0) {
 		num -= 1;
 	}
 	int leftSize = Size;
@@ -263,7 +288,7 @@ int UpLoader::uploadChunkAttribute(void *data, int offset, int size) {
 		for (int j = 0; j < vertexBuffers.size(); j++) {
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2 + j, 0);
 		}
-		csShader_Attribute->release(); // 解绑着色器
+		csShader_Attribute->unbind(); // 解绑着色器
 		glMemoryBarrier(GL_ALL_BARRIER_BITS);
 	}
 	return size;

@@ -11,7 +11,7 @@
 
 unsigned char* Base::load_img(const QString &filename, int &width, int &height,int &Format)
 {
-	QImage *img=new QImage(filename);
+	QImage *img = new QImage(filename);
 	width = img->width();
 	height = img->height(); 
 

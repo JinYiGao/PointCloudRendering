@@ -51,6 +51,9 @@ public:
 	GLBuffer(GLuint VBO);
 	~GLBuffer();
 
+	// 绑定该 Buffer 进行绘制
+	void bind();
+
 	// 传入顶点数据并设置交错顶点属性解析
 	// 传入数组
 	void set(const void *vertices, GLsizei size, vector<GLBufferAttribute> attributes, int count);

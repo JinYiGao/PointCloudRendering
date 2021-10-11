@@ -1,4 +1,4 @@
-file(GLOB SOURCES "*.ui" "*.cpp" "*.h" "../*.qrc") 
+file(GLOB SOURCES "*.ui" "*.cpp" "*.h" "../*.qrc" "./darkstyle/*.qrc" "./skin/*.qrc") 
 #将ui文件和生成文件整理在一个文件夹中，非必须
 SOURCE_GROUP("Main" FILES ${SOURCES})
 

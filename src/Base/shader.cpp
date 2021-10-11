@@ -11,7 +11,12 @@
 Shader::Shader() {
 	initializeOpenGLFunctions();
 } 
- 
+
+Shader::~Shader() {
+	glDeleteBuffers(1, &programId);
+	delete shader;
+}
+
 // 创建计算着色器程序 
 Shader::Shader(const QString &computerShaderFileName) {
 	initializeOpenGLFunctions();
@@ -48,12 +53,29 @@ Shader::Shader(const QString &vertShaderFileName, const QString &fragShaderFilen
 	}
 }
 
+bool Shader::compileShaderFromSourceCode(const char *vertShaderSource, const char *fragShaderSource) {
+	shader = new QOpenGLShaderProgram();
+	shader->addShaderFromSourceCode(QOpenGLShader::Vertex, vertShaderSource);
+	shader->addShaderFromSourceCode(QOpenGLShader::Fragment, fragShaderSource);
+	bool success = shader->link();
+	if (!success)
+	{
+		qDebug() << shader->log();
+	}
+	else
+	{
+		programId = shader->programId();
+		qDebug() << "Success Link Shader";
+	}
+	return success;
+}
+
 bool Shader::bind()
 {
 	return shader->bind();
 }
 
-void Shader::release()
+void Shader::unbind()
 {
 	shader->release();
 }

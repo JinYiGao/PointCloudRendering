@@ -4,10 +4,12 @@
  * @Author: JinYiGao
  * @Date: 2021-05-29 18:36:41
  * @LastEditors: JinYiGao
- * @LastEditTime: 2021-07-01 14:47:12
+ * @LastEditTime: 2021-07-31 23:36:30
  */
 
 #include <renderingWidget.h>
+#include <Main/DBRoot.h>
+#include <Main/mainwindow.h>
 
 //继承自QOpenGLFunctions可以避免每次调用opengl函数时使用前缀
 RenderWidget::RenderWidget(QWidget *parent) : QOpenGLWidget(parent){
@@ -16,7 +18,7 @@ RenderWidget::RenderWidget(QWidget *parent) : QOpenGLWidget(parent){
 	this->toolManager = nullptr;
 }
 
-RenderWidget::RenderWidget(QWidget *parent, PointCloud *pcd) : QOpenGLWidget(parent){
+RenderWidget::RenderWidget(QWidget *parent, std::shared_ptr<PointCloud> &pcd) : QOpenGLWidget(parent){
 	//this->pcd = pcd;
 	addPointCloud(pcd);
 	// 初始化相机
@@ -32,21 +34,81 @@ RenderWidget::~RenderWidget() {
 
 // 初始化工具
 void RenderWidget::initTools() {
+	// 设置焦点接收
+	this->setFocusPolicy(Qt::StrongFocus);
+
+	pcdManager = PcdManager::GetInstance();
+
 	toolManager = new ToolManager(this);
 
 	toolCamera = new ToolCamera(this);
 	toolDrawPolygon = new ToolDrawPolygon();
+	toolDrawPolyline = new ToolDrawPolyline();
+	toolDeletePcd = new ToolDeletePcd(this);
+	toolAddPcd = new ToolAddPcd(this);
+	toolPick = new ToolPick(this);
+	toolEditLabel = new ToolEditLabel(this);
 
+	// 工具注册
 	toolManager->register_tool(CameraTool, toolCamera);
 	toolManager->register_tool(DrawPolygonTool, toolDrawPolygon);
+	toolManager->register_tool(DrawPolylineTool, toolDrawPolyline);
+	toolManager->register_tool(DeletePcdTool, toolDeletePcd);
+	toolManager->register_tool(AddPcdTool, toolAddPcd);
+	toolManager->register_tool(PickPointTool, toolPick);
+	toolManager->register_tool(EditLabelTool, toolEditLabel);
 
+	// 默认工具切换为相机
 	toolManager->changeTool(CameraTool);
 }
 
 // 添加点云
-void RenderWidget::addPointCloud(PointCloud *pcd) {
+void RenderWidget::addPointCloud(std::shared_ptr<PointCloud> &pcd) {
 	ProgressiveRender *progressiveRender = new ProgressiveRender(this, pcd);
-	renderList.emplace_back(progressiveRender);
+	// 防止同时写入读取冲突
+	auto copyrenderList = renderList;
+	copyrenderList.emplace_back(progressiveRender);
+	renderList = copyrenderList;
+	//renderList.emplace_back(progressiveRender);
+
+	if (renderList.size() == 1) {
+		camera->setPreTransform(pcd->getModelMatrixToOrigin()); // 以第一个点云为基准 平移至中心
+	}
+
+	//// 初始化相机设置
+	double diagonal = pcd->boundingBox.diagonal().norm();
+	camera->zoom = 1.0 / diagonal;
+	camera->scene_bbox = pcd->boundingBox;
+}
+
+void RenderWidget::removePointCloud(std::shared_ptr<PointCloud> &pcd) {
+	vector<ProgressiveRender*>::iterator it = renderList.begin();
+	for (int i = 0; i < renderList.size(), it != renderList.end(); i++) {
+		if (renderList[i]->name == pcd->name) {
+			delete renderList[i];
+			renderList[i] = nullptr;
+			it = renderList.erase(it);    //删除元素，返回值指向已删除元素的下一个位置
+			i--;
+		}
+		else {
+			++it;    //指向下一个位置
+		}
+	}
+}
+
+void RenderWidget::removePointCloud(QString name) {
+	vector<ProgressiveRender*>::iterator it = renderList.begin();
+	for (int i = 0; i < renderList.size(), it != renderList.end(); i++) {
+		if (renderList[i]->name == name) {
+			delete renderList[i];
+			renderList[i] = nullptr;
+			it = renderList.erase(it);    //删除元素，返回值指向已删除元素的下一个位置
+			i--;
+		}
+		else {
+			++it;    //指向下一个位置
+		}
+	}
 }
 
 void RenderWidget::initializeGL()
@@ -90,7 +152,9 @@ void RenderWidget::initializeGL()
 	createVBOShader = new Shader(":/PointCloud/shaders/create_vbo.cs");
 	edlShader = new Shader(":/PointCloud/shaders/edl.vs", ":/PointCloud/shaders/edl.fs");
 	edlShaderMSAA = new Shader(":/PointCloud/shaders/edl.vs", ":/PointCloud/shaders/edlMSAA.fs");
-	SegmentShader = new Shader(":/PointCloud/shaders/select.cs");
+	SegmentShader = new Shader(":/PointCloud/shaders/segment.cs");
+	resumeSegmentShader = new Shader(":/PointCloud/shaders/resume_segment.cs");
+	selectShader = new Shader(":/PointCloud/shaders/select.cs");
 	// -------------------------------------------------------------------------------------------------
 
 	// ---------------------------------------- 纹理创建 -----------------------------------------------
@@ -108,6 +172,7 @@ void RenderWidget::resizeGL(int w, int h)
 			toolDrawPolygon->polygon[i].y *= (h / (float)window->height);
 		}
 	}
+
 	window->width = w;
 	window->height = h;
 
@@ -126,10 +191,16 @@ void RenderWidget::paintGL()
 	if (renderList.size() == 0) {
 		return;
 	}
+
+	QPainter painter;
+	painter.begin(this);
+	painter.beginNativePainting();
+
 	// 开启着色器点大小获取
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	// 开启深度检测
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 	// 设置帧缓冲样本数 --- 采样方式
 	fbo->setSamples(MSAA_SAMPLES);
 	// 绑定当前渲染到帧缓冲 ------------------- 离屏渲染
@@ -141,6 +212,9 @@ void RenderWidget::paintGL()
 	for (int i = 0; i < renderList.size(); i++) {
 		renderList[i]->renderPointCloudProgressive();
 	}
+
+	// ToolManager gl Draw
+	toolManager->gl_draw();
 
 	// 开启 EDL
 	if (EDL_ENABLE) {
@@ -181,7 +255,6 @@ void RenderWidget::paintGL()
 			0, 0, fboEDL->width, fboEDL->height,
 			0, 0, window->width, window->height,
 			GL_COLOR_BUFFER_BIT, GL_LINEAR);
-		
 	}
 	else {
 		// 复制fbo帧缓冲内容到屏幕帧缓冲
@@ -191,11 +264,18 @@ void RenderWidget::paintGL()
 			GL_COLOR_BUFFER_BIT, GL_LINEAR);
 	}
 
-	// toolManager绘制二维图形
-	painter = new QPainter(this);
-	painter->setPen(QPen(Qt::green, 1));
-	toolManager->draw(painter);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
 
+	painter.endNativePainting();
+
+	// toolManager绘制二维图形 (ps: 一定记得QPainter绘制时解绑opengl相关变量)
+	toolManager->draw(&painter);
+	for (auto &pair : this->extraTools) {
+		pair.second->draw(&painter);
+	}
+	painter.end();
+	
 	update();
 }
 
@@ -208,40 +288,144 @@ void RenderWidget::setEDL(bool enable) {
 	this->EDL_ENABLE = enable;
 }
 
+int RenderWidget::RegisterExtraTool(Tool* tool) {
+	int id = this->extraTools.size();
+	tool->activate();
+	this->extraTools.emplace(id, tool);
+	return id;
+}
+
+bool RenderWidget::RemoveExtraTool(Tool *tool) {
+	for (auto pair = this->extraTools.begin(); pair != this->extraTools.end();) {
+		if (pair->second == tool) {
+			pair->second->deactivate();
+			delete pair->second;
+			pair->second = nullptr;
+			this->extraTools.erase(pair++);
+
+			return true;
+		}
+		else {
+			pair++;
+		}
+	}
+	return false;
+}
+
+bool RenderWidget::RemoveExtraToolById(int id) {
+	for (auto pair = this->extraTools.begin(); pair != this->extraTools.end();) {
+		if (pair->first == id) {
+			pair->second->deactivate();
+			delete pair->second;
+			pair->second = nullptr;
+			this->extraTools.erase(pair++);
+
+			return true;
+		}
+		else {
+			pair++;
+		}
+	}
+	return false;
+}
+
 // 鼠标交互控制
 void RenderWidget::mousePressEvent(QMouseEvent *e) {
 	toolManager->mousePress(e);
+
+	for (auto &pair : this->extraTools) {
+		pair.second->mousePress(e);
+	}
 }
 
 void RenderWidget::mouseReleaseEvent(QMouseEvent *e)
 {
 	toolManager->mouseRelease(e);
+
+	for (auto &pair : this->extraTools) {
+		pair.second->mouseRelease(e);
+	}
 }
 
 void RenderWidget::mouseMoveEvent(QMouseEvent *e)
 {
 	toolManager->mouseMove(e);
+
+	for (auto &pair : this->extraTools) {
+		pair.second->mouseMove(e);
+	}
 }
 
 void RenderWidget::mouseDoubleClickEvent(QMouseEvent *e) {
 	toolManager->mouseDoubleClick(e);
+
+	for (auto &pair : this->extraTools) {
+		pair.second->mouseDoubleClick(e);
+	}
 }
 
 void RenderWidget::wheelEvent(QWheelEvent *e)
 {
 	toolManager->wheelEvent(e);
+
+	for (auto &pair : this->extraTools) {
+		pair.second->wheelEvent(e);
+	}
+}
+
+void RenderWidget::keyPressEvent(QKeyEvent *e) {
+	this->toolManager->keyPress(e);
+
+	/*if (toolManager->getToolType() != DrawPolylineTool && EnableDrawPolyline) {
+		toolDrawPolyline->keyPress(e);
+	}*/
+	for (auto &pair : this->extraTools) {
+		pair.second->keyPress(e);
+	}
 }
 
 // 调用progressive函数进行裁剪
-void RenderWidget::startSegment(vector<std::string> name) {
+void RenderWidget::startSegment(vector<QString> name, int mode) {
 	if (toolManager->getToolType() != DrawPolygonTool) {
 		return;
 	}
 	for (int i = 0; i < name.size(); i++) {
 		for (int j = 0; j < renderList.size(); j++) {
 			if (name[i] == renderList[j]->name) {
-				renderList[j]->Segment(toolDrawPolygon->polygon);
+				renderList[j]->Segment(toolDrawPolygon->polygon, mode);
 			}
 		}
 	}
+}
+
+void RenderWidget::resumeSegment(vector<QString> name) {
+	for (int i = 0; i < name.size(); i++) {
+		for (int j = 0; j < renderList.size(); j++) {
+			if (name[i] == renderList[j]->name) {
+				renderList[j]->resumeSegment();
+			}
+		}
+	}
+}
+
+std::shared_ptr<PointCloud> RenderWidget::createPcd(vector<QString> name) {
+	vector<std::shared_ptr<PointCloud>>pcds;
+	for (int i = 0; i < name.size(); i++) {
+		for (int j = 0; j < renderList.size(); j++) {
+			if (name[i] == renderList[j]->name) {
+				std::shared_ptr<PointCloud> pcd_ = renderList[j]->createPcdFromBuffer();
+				if (pcd_ != nullptr) {
+					pcds.emplace_back(pcd_);
+				}
+			}
+		}
+	}
+	// merge pcds
+	std::shared_ptr<PointCloud> pcd = pcdManager->merge_poindcloud(pcds);
+
+	return pcd;
+}
+
+vector<ProgressiveRender*> RenderWidget::getRenderList() {
+	return this->renderList;
 }

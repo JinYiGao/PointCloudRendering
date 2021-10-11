@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1043</width>
+    <width>1056</width>
     <height>654</height>
    </rect>
   </property>
@@ -14,28 +14,31 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout_2">
-    <item row="0" column="0">
-     <widget class="RenderWidget" name="openGLWidget"/>
-    </item>
-   </layout>
+   <layout class="QGridLayout" name="gridLayout_2"/>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1043</width>
+     <width>1056</width>
      <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
     <property name="title">
-     <string>文件</string>
+     <string>File</string>
     </property>
     <addaction name="actionopen"/>
+    <addaction name="save"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
    </widget>
    <addaction name="menu"/>
+   <addaction name="menuEdit"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="fileInfo_dock">
@@ -52,7 +55,7 @@
     </size>
    </property>
    <property name="windowTitle">
-    <string>点云信息</string>
+    <string>PointCloud Info</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -72,6 +75,9 @@
        </property>
        <item>
         <widget class="PcdTreeWidget" name="treeWidget">
+         <property name="frameShape">
+          <enum>QFrame::Box</enum>
+         </property>
          <attribute name="headerVisible">
           <bool>false</bool>
          </attribute>
@@ -107,7 +113,7 @@
     </size>
    </property>
    <property name="windowTitle">
-    <string>属性</string>
+    <string>Property</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -122,6 +128,9 @@
     <layout class="QVBoxLayout" name="verticalLayout_4">
      <item>
       <widget class="QTreeView" name="propertiesView">
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
        <property name="editTriggers">
         <set>QAbstractItemView::NoEditTriggers</set>
        </property>
@@ -165,13 +174,16 @@
         </font>
        </property>
        <property name="title">
-        <string>可选项</string>
+        <string>Options</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="1" column="0">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>MSAA:</string>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="val_MSAA">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>16</number>
           </property>
          </widget>
         </item>
@@ -183,17 +195,7 @@
            </font>
           </property>
           <property name="text">
-           <string>开启EDL</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QSpinBox" name="val_MSAA">
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>16</number>
+           <string>Enable EDL</string>
           </property>
          </widget>
         </item>
@@ -209,6 +211,13 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>MSAA:</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -232,25 +241,138 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="toolbtn_segment"/>
+   <addaction name="toolbtn_delete"/>
+   <addaction name="toolbtn_add"/>
+   <addaction name="toolbtn_pick"/>
+   <addaction name="toolbtn_edit"/>
+   <addaction name="toolbtn_drawProfile"/>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget">
+   <property name="features">
+    <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+   </property>
+   <property name="windowTitle">
+    <string>Command History</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_3">
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QUndoView" name="undoView">
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
   </widget>
   <action name="actionopen">
    <property name="text">
-    <string>打开文件</string>
+    <string>Open</string>
+   </property>
+  </action>
+  <action name="save">
+   <property name="text">
+    <string>Save</string>
+   </property>
+  </action>
+  <action name="toolbtn_segment">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/PointCloud/images/segment.png</normaloff>
+     <normalon>:/PointCloud/images/segment.png</normalon>:/PointCloud/images/segment.png</iconset>
+   </property>
+   <property name="text">
+    <string>裁剪</string>
+   </property>
+   <property name="toolTip">
+    <string>Segment</string>
+   </property>
+  </action>
+  <action name="toolbtn_delete">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/PointCloud/images/delete.png</normaloff>:/PointCloud/images/delete.png</iconset>
+   </property>
+   <property name="text">
+    <string>删除</string>
+   </property>
+   <property name="toolTip">
+    <string>Delete</string>
+   </property>
+  </action>
+  <action name="undoAction">
+   <property name="text">
+    <string>Undo</string>
+   </property>
+  </action>
+  <action name="redoAction">
+   <property name="text">
+    <string>Redo</string>
+   </property>
+  </action>
+  <action name="toolbtn_add">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/PointCloud/images/add.png</normaloff>:/PointCloud/images/add.png</iconset>
+   </property>
+   <property name="text">
+    <string>add</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add PointCloud To Original&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="toolbtn_pick">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/PointCloud/images/Select.png</normaloff>:/PointCloud/images/Select.png</iconset>
+   </property>
+   <property name="text">
+    <string>Select</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select Point&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="toolbtn_edit">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/PointCloud/images/editProperty.png</normaloff>:/PointCloud/images/editProperty.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Edit PointCloud Properties&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="toolbtn_drawProfile">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/PointCloud/images/drawProfile.png</normaloff>:/PointCloud/images/drawProfile.png</iconset>
+   </property>
+   <property name="text">
+    <string>DrawProfile</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Draw Section Profile&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>RenderWidget</class>
-   <extends>QOpenGLWidget</extends>
-   <header>PointCloud/renderingWidget.h</header>
-  </customwidget>
   <customwidget>
    <class>PcdTreeWidget</class>
    <extends>QTreeWidget</extends>
    <header location="global">Main/DBRoot.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../res.qrc"/>
+ </resources>
  <connections/>
 </ui>

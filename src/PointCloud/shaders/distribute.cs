@@ -3,6 +3,11 @@
 #extension GL_NV_gpu_shader5 : enable
 
 uniform int MaxPointsPerBuffer;
+
+layout(location = 2) uniform int uNumPoints;
+layout(location = 3) uniform int uPrime;
+layout(location = 4) uniform int uOffset;
+
 // 设置本地工作组大小
 layout(local_size_x = 32, local_size_y = 1) in;
 
@@ -22,38 +27,32 @@ layout(std430, binding = 0) buffer ssInputBuffer{
 layout(std430, binding = 2) buffer ssTargetBuffer0{
 	Vertex targetBuffer0[];
 };
-
 layout(std430, binding = 3) buffer ssTargetBuffer1{
 	Vertex targetBuffer1[];
 };
-
 layout(std430, binding = 4) buffer ssTargetBuffer2{
 	Vertex targetBuffer2[];
 };
-
 layout(std430, binding = 5) buffer ssTargetBuffer3{
 	Vertex targetBuffer3[];
 };
-
 layout(std430, binding = 6) buffer ssTargetBuffer4{
 	Vertex targetBuffer4[];
 };
-
 layout(std430, binding = 7) buffer ssTargetBuffer5{
 	Vertex targetBuffer5[];
 };
-
 layout(std430, binding = 8) buffer ssTargetBuffer6{
 	Vertex targetBuffer6[];
 };
-
 layout(std430, binding = 9) buffer ssTargetBuffer7{
 	Vertex targetBuffer7[];
 };
 
-layout(location = 2) uniform int uNumPoints;
-layout(location = 3) uniform int uPrime;
-layout(location = 4) uniform int uOffset;
+// 打乱后索引表 536000000
+layout(std430, binding = 10) buffer indexTableBuffer0{
+	uint indexTable0[];
+};
 
 int64_t permuteI(int64_t number, int64_t prime){
 	if(number > prime){
@@ -76,13 +75,14 @@ void main(){
 		return;
 	}
 
-	uint globalInputIndex = inputIndex + uOffset;
+	uint globalInputIndex = inputIndex + uOffset; // 该点在全局索引
 
 	int64_t primeI64 = int64_t(uPrime);
-	// gloablInputIndex ———— t 一一映射
+	// globalInputIndex ———— t 一一映射
 	int64_t t = permuteI(int64_t(globalInputIndex), primeI64);
 	t = permuteI(t, primeI64);
 	uint targetIndex = uint(t);
+	indexTable0[targetIndex] = globalInputIndex; // target ———— input 索引映射
 
 	Vertex v = inputBuffer[inputIndex];
 

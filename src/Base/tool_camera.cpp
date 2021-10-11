@@ -22,39 +22,68 @@ ToolCamera::~ToolCamera() {
 
 }
 
+void ToolCamera::setCameraType(int cameratype) {
+	this->cameraType = cameratype;
+	//this->camera->position = Eigen::Vector3f(0, 0, 1.0);
+	this->camera->arcball.setState(Quaternionf::Identity());
+}
+
+void ToolCamera::setProjection(int projMethod) {
+	if (projMethod == Perspective) {
+		this->camera->is_ortho = false;
+	}
+	else if (projMethod == Ortho) {
+		this->camera->is_ortho = true;
+	}
+}
+
+void ToolCamera::suspend() {
+	this->isSuspend = true;
+}
+
+void ToolCamera::resume() {
+	this->isSuspend = false;
+}
+
 int ToolCamera::getToolType() {
-	return type;
+	return this->toolType;
 }
 
 void ToolCamera::mousePress(QMouseEvent *e){
-	//×ó¼ü°´ÏÂ
-	if (e->buttons() == Qt::LeftButton)
+	if (isSuspend) {
+		return;
+	}
+	//å·¦é”®æŒ‰ä¸‹
+	if (e->buttons() == Qt::LeftButton && this->cameraType != Camera2D)
 	{
 		camera->is_rotate = true;
 		Vector2i screen(e->localPos().x(), e->localPos().y());
-		camera->start_rotate(screen); //¿ªÊ¼Ðý×ª
+		camera->start_rotate(screen); //å¼€å§‹æ—‹è½¬
 	}
-	//ÖÐ¼ü°´ÏÂ
+	//ä¸­é”®æŒ‰ä¸‹
 	if (e->buttons() == Qt::MiddleButton)
 	{
 		camera->is_translate = true;
 		Vector2f screen(e->localPos().x(), e->localPos().y());
-		camera->start_translate(screen); //¿ªÊ¼Æ½ÒÆ
+		camera->start_translate(screen); //å¼€å§‹å¹³ç§»
 	}
 	glWidget->update();
 }
 
 void ToolCamera::mouseMove(QMouseEvent *e) {
+	if (isSuspend) {
+		return;
+	}
 	if (!camera->is_rotate && !camera->is_translate) {
 		return;
 	}
-	// ×ó¼ü°´ÏÂÒÆ¶¯
+	// å·¦é”®æŒ‰ä¸‹ç§»åŠ¨
 	if (e->type() == QEvent::MouseMove && (e->buttons() == Qt::LeftButton))
 	{
 		Eigen::Vector2i screen(e->localPos().x(), e->localPos().y());
 		camera->motion_rotate(screen);
 	}
-	// ÖÐ¼ü°´ÏÂÒÆ¶¯
+	// ä¸­é”®æŒ‰ä¸‹ç§»åŠ¨
 	if (e->type() == QEvent::MouseMove && (e->buttons() == Qt::MiddleButton))
 	{
 		Eigen::Vector2f screen(e->localPos().x(), e->localPos().y());
@@ -65,15 +94,23 @@ void ToolCamera::mouseMove(QMouseEvent *e) {
 }
 
 void ToolCamera::mouseRelease(QMouseEvent *e) {
+	if (isSuspend) {
+		return;
+	}
 	Eigen::Vector2i screen(e->localPos().x(), e->localPos().y());
-	camera->end_rotate(screen);    //½áÊøÐý×ª
-	camera->end_translate(screen); //½áÊøÆ½ÒÆ
+	camera->end_rotate(screen);    //ç»“æŸæ—‹è½¬
+	camera->end_translate(screen); //ç»“æŸå¹³ç§»
 
 	glWidget->update();
 }
 
 void ToolCamera::wheelEvent(QWheelEvent *e) {
-	// Ëõ·Å
-	camera->zoom = std::max(0.0001, camera->zoom * (e->angleDelta().y() > 0 ? 1.1 : 0.9));
-	camera->zoom = std::min(1000.0f, camera->zoom);
+	if (isSuspend) {
+		return;
+	}
+	// ç¼©æ”¾
+	camera->zoom = camera->zoom * (e->angleDelta().y() > 0 ? 1.1 : 0.9);
+	//é€šè¿‡æ”¹å˜ç›¸æœºè§†é‡Ž æ¥ç¼©æ”¾ æ•ˆæžœå¥½
+	//camera->view_angle = std::max(0.001, camera->view_angle * (e->angleDelta().y() < 0 ? 1.1 : 0.9));
+	//camera->view_angle = std::min(1000.0f, camera->view_angle);
 }

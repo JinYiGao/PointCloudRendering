@@ -8,18 +8,52 @@
  */
 #pragma once
 #include <Base/common.h>
+#include <memory>
+#include <QString>
+#include <QStack>
+#include <vector>
+
+using std::vector;
 
 enum ATTRIBUTEMODE {
 	FROM_GRADIENT = 0, // 从颜色梯度图采样
 	FROM_RBG, // 从RGB采样
 	FROM_Label, //从分类采样
-	FROM_IDENTISITY, // 从强度着色
+	FROM_INTENSITY, // 从强度着色
 	NO_COLOR // 不展示颜色
 };
+
+// 分类标签
+enum CLASSIFICATION {
+	NeverClassified = 0,
+	Unassigned,
+	Ground,
+	LowVegetation,
+	MediumVegetation,
+	HighVegetation,
+	Building,
+	Noise,
+	Reserved,
+	Water,
+	Rail,
+	Road,
+	Overlap,
+	WireGuard,
+	WireConductor,
+	TransmissionTower,
+	WireConnector,
+	BridgeDeck,
+	HighNoise
+};
+
 class PointCloud {
 public:
 	// name
-	std::string name;
+	QString name;
+	
+	// ---------------------------------------------------------------------------------------
+	// ----------------------------------- Attributes ----------------------------------------
+	// ---------------------------------------------------------------------------------------
 
 	int points_num = 0;
 
@@ -54,6 +88,8 @@ public:
 	// 点云初始偏移值 ---由las文件读取 offset + position才是世界坐标
 	Eigen::Vector3f offset;
 
+	// ---------------------------------------------------------------------------------------
+
 	// 点云编辑平移值
 	Eigen::Vector3f translate;
 
@@ -62,6 +98,8 @@ public:
 
 	// 点云编辑尺度缩放
 	float zoom;
+
+	uint32_t *indexTable; // 打乱后索引映射 targetIndex —— originIndex
 
 protected:
 	//--------------------------------------- 点云样式相关设置 ----------------------------------
@@ -72,6 +110,8 @@ protected:
 	int maxIdensity;
 	int minIdensity;
 	Eigen::MatrixXf colorStrip;
+
+	QStack<int> flagTable; // 点云添加标记位, 新增点云的起始位置索引
 
 public:
 	PointCloud();
@@ -90,5 +130,11 @@ public:
 	int getmaxIdensity() const;
 	int getminIdensity() const;
 
-	Eigen::Matrix4f getModelMatrix();
+	void removeByIndex(int index); // 按照点索引删除点
+	void addPcd(std::shared_ptr<PointCloud> &pcd); // 添加一块点云
+	void removeLastPcd(); // 删除上次添加的点云
+
+	Eigen::Matrix4f getModelMatrixToOrigin();
+
+	bool isempty();
 };

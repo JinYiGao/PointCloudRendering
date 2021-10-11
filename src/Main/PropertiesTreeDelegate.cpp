@@ -4,7 +4,7 @@
  * @Author: JinYiGao
  * @Date: 2021-07-21 20:42:38
  * @LastEditors: JinYiGao
- * @LastEditTime: 2021-07-21 20:42:39
+ * @LastEditTime: 2021-07-31 23:32:27
  */
 #include <PropertiesTreeDelegate.h>
 #include <PointCloud/pointclouds.h>
@@ -12,7 +12,7 @@
  // Default separator colors
 constexpr const char* SEPARATOR_STYLESHEET = "QLabel { background-color : darkGray; color : white; }";
 
-// 生成Item项
+// 
 static QStandardItem* ITEM(const QString& name,
 	Qt::ItemFlag additionalFlags = Qt::NoItemFlags,
 	PROPERTY_ROLE role = OBJECT_NO_PROPERTY)
@@ -29,7 +29,7 @@ static QStandardItem* ITEM(const QString& name,
 	return item;
 }
 
-// 生成复选框Item项
+// 
 static QStandardItem* CHECKABLE_ITEM(bool checkState, PROPERTY_ROLE role)
 {
 	QStandardItem* item = ITEM("", Qt::ItemIsUserCheckable, role);
@@ -54,16 +54,17 @@ PropertiesTreeDelegate::~PropertiesTreeDelegate() {
 }
 
 void PropertiesTreeDelegate::unbind() {
+	this->currentPcd = nullptr;
 	if (m_model) {
 		m_model->disconnect(this);
 	}
 }
 
-PointCloud* PropertiesTreeDelegate::getCurrentPcd() {
+std::shared_ptr<PointCloud> PropertiesTreeDelegate::getCurrentPcd() {
 	return this->currentPcd;
 }
 
-void PropertiesTreeDelegate::fillModel(PointCloud *pcd) {
+void PropertiesTreeDelegate::fillModel(std::shared_ptr<PointCloud> &pcd) {
 	if (pcd == nullptr) {
 		return;
 	}
@@ -113,7 +114,7 @@ void PropertiesTreeDelegate::appendRow(QStandardItem* leftItem, QStandardItem* r
 	}
 }
 
-void PropertiesTreeDelegate::fillWithPcd(PointCloud *pcd) {
+void PropertiesTreeDelegate::fillWithPcd(std::shared_ptr<PointCloud> &pcd) {
 	if (!pcd || !m_model) {
 		return;
 	}
@@ -121,7 +122,7 @@ void PropertiesTreeDelegate::fillWithPcd(PointCloud *pcd) {
 	addSeparator(tr("Point Cloud"));
 
 	// name
-	appendRow(ITEM(tr("Name")), ITEM(QString::fromStdString(pcd->name), Qt::ItemIsEditable, OBJECT_NAME));
+	appendRow(ITEM(tr("Name")), ITEM(pcd->name, Qt::ItemIsEditable, OBJECT_NAME));
 	// points
 	appendRow(ITEM(tr("PointsNum")), ITEM(QString::number(pcd->points_num)));
 	// visibility
@@ -131,7 +132,6 @@ void PropertiesTreeDelegate::fillWithPcd(PointCloud *pcd) {
 	// point size
 	appendRow(ITEM(tr("Point Size")), PERSISTENT_EDITOR(OBJECT_CLOUD_POINT_SIZE), true);
 
-	// item更改时触发事件
 	connect(m_model, SIGNAL(itemChanged(QStandardItem*)), this, SLOT(updateItem(QStandardItem*)));
 }
 
@@ -145,7 +145,7 @@ bool PropertiesTreeDelegate::isWideEditor(int itemData) const {
 	return false;
 }
 
-// item绘制样式控制Editor
+// 创建控件
 QWidget* PropertiesTreeDelegate::createEditor(QWidget *parent,
 	const QStyleOptionViewItem &option,
 	const QModelIndex &index) const {
@@ -160,14 +160,14 @@ QWidget* PropertiesTreeDelegate::createEditor(QWidget *parent,
 		return nullptr;
 	}
 
-	int itemData = item->data().toInt(); // 获取该item的枚举类型
+	int itemData = item->data().toInt(); // 
 	if (item->column() == 0 && !isWideEditor(itemData)) {
 		//on the first column, only editors spanning on 2 columns are allowed
 		return nullptr;
 	}
 	
 	QWidget *outputWidget = nullptr;
-	// 根据不同role选择样式
+	//
 	switch (itemData) 
 	{
 		case OBJECT_COLOR: {
@@ -190,6 +190,7 @@ QWidget* PropertiesTreeDelegate::createEditor(QWidget *parent,
 			QSpinBox *spinBox = new QSpinBox(parent);
 			spinBox->setRange(1, 10);
 			spinBox->setSingleStep(1);
+			spinBox->setMinimumHeight(25);
 
 			connect(spinBox, SIGNAL(valueChanged(int)), this, SLOT(changePointSize(int)));
 
@@ -198,7 +199,7 @@ QWidget* PropertiesTreeDelegate::createEditor(QWidget *parent,
 		break;
 		case TREE_VIEW_HEADER:{
 			QLabel *headerLabel = new QLabel(parent);
-			headerLabel->setStyleSheet(SEPARATOR_STYLESHEET); // 设置标题头样式
+			headerLabel->setStyleSheet(SEPARATOR_STYLESHEET); // 
 			outputWidget = headerLabel;
 		}
 		break;
@@ -237,7 +238,7 @@ void SetComboBoxIndex(QWidget *editor, int index) {
 	comboBox->setCurrentIndex(index);
 }
 
-// 设置Editor内容
+// 设置数据
 void PropertiesTreeDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const {
 	if (!m_model || !currentPcd) {
 		return;
@@ -280,7 +281,7 @@ void PropertiesTreeDelegate::setEditorData(QWidget *editor, const QModelIndex &i
 			SetComboBoxIndex(editor, 2);
 			break;
 		}
-		case FROM_IDENTISITY:
+		case FROM_INTENSITY:
 		{
 			SetComboBoxIndex(editor, 3);
 			break;
@@ -308,7 +309,7 @@ void PropertiesTreeDelegate::colorChanged(QString type) {
 		currentPcd->setAttributeMode(FROM_Label);
 	}
 	else if (type == "Idensity") {
-		currentPcd->setAttributeMode(FROM_IDENTISITY);
+		currentPcd->setAttributeMode(FROM_INTENSITY);
 	}
 }
 
@@ -316,7 +317,7 @@ void PropertiesTreeDelegate::changePointSize(int size) {
 	currentPcd->setPointSize(size);
 }
 
-// 原生item更改时可能发生的一些变化
+//
 void PropertiesTreeDelegate::updateItem(QStandardItem *item) {
 	if (!currentPcd || item->column() == 0 || !item->data().isValid()) {
 		return;

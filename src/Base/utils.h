@@ -9,8 +9,10 @@
 #pragma once
 
 #include <QOpenGLFunctions_4_5_Core>
+#include <QDebug>
 #include <chrono>
 #include <ctime>
+#include <Eigen/Eigen>
 
 using namespace std::chrono;
 
@@ -48,3 +50,27 @@ static double now() {
 	return secondsSinceStart;
 }
 
+template<typename T>
+static Eigen::Matrix<T, -1, -1> mergeMatrixLeftRight(Eigen::Matrix<T, -1, -1> left, Eigen::Matrix<T, -1, -1> right) {
+	Eigen::Matrix<T, -1, -1> result;
+	result.resize(left.rows(), left.cols() + right.cols());
+	if (left.rows() != right.rows()) {
+		qDebug() << "Merge Failed! Rows Not Equal!";
+		return result;
+	}
+	result << left, right;
+	return result;
+}
+
+template<typename T>
+static Eigen::Matrix<T, -1, -1> mergeMatrixUpDown(Eigen::Matrix<T, -1, -1> up, Eigen::Matrix<T, -1, -1> down) {
+	Eigen::Matrix<T, -1, -1> result;
+	result.resize(up.rows() + down.rows(), up.cols());
+	if (up.cols() != down.cols()) {
+		qDebug() << "Merge Failed! Cols Not Equal!"; 
+		return result;
+	}
+	result << up,
+		down;
+	return result;
+}

@@ -22,45 +22,65 @@ SegmentationWidget::~SegmentationWidget()
     delete ui;
 }
 
-// È¡Ïû²Ã¼ô
+// å–æ¶ˆè£å‰ª
 void SegmentationWidget::cancel_segment() {
 	if (glWidget == nullptr) {
 		return;
 	}
 	std::cout << "cencel segement" << std::endl;
-	glWidget->toolManager->changeTool(CameraTool); // ¸ü¸Äµ±Ç°Ê¹ÓÃ¹¤¾ß
+	glWidget->toolManager->changeTool(CameraTool); // æ›´æ”¹å½“å‰ä½¿ç”¨å·¥å…·
+	// æ¢å¤è£å‰ªçš„ç‚¹äº‘
+	vector<QString> namelist = dbRoot->getSelectedPcdName();
+	if (namelist.size() == 0) {
+		return;
+	}
+	glWidget->resumeSegment(namelist);
 	this->hide();
-	// »Ö¸´²Ã¼ôµÄµãÔÆ
 }
 
-// ±£Áô¶à±ßĞÎÄÚ²¿µãÔÆ
+// ä¿ç•™å¤šè¾¹å½¢å†…éƒ¨ç‚¹äº‘
 void SegmentationWidget::inPolygon_segment() {
 	qDebug() << "InPolygon";
 	if (glWidget == nullptr) {
 		return;
 	}
-	vector<PointCloud*> pcdSelected = dbRoot->getSelectedPcd();
-	if (pcdSelected.size() == 0) {
+	vector<QString> namelist = dbRoot->getSelectedPcdName();
+	if (namelist.size() == 0) {
 		return;
 	}
-	vector<std::string> namelist;
-	for (int i = 0; i < pcdSelected.size(); i++) {
-		namelist.emplace_back(pcdSelected[i]->name);
-	}
-	glWidget->startSegment(namelist);
+	glWidget->startSegment(namelist, 0);
+	glWidget->toolManager->changeTool(CameraTool); // æ›´æ”¹å½“å‰ä½¿ç”¨å·¥å…·
 }
 
-// ±£Áô¶à±ßĞÎÍâ²¿µãÔÆ
+// ä¿ç•™å¤šè¾¹å½¢å¤–éƒ¨ç‚¹äº‘
 void SegmentationWidget::outPolygon_segment() {
+	qDebug() << "OutPolygon";
 	if (glWidget == nullptr) {
 		return;
 	}
+	vector<QString> namelist = dbRoot->getSelectedPcdName();
+	if (namelist.size() == 0) {
+		return;
+	}
+	glWidget->startSegment(namelist, 1);
+	glWidget->toolManager->changeTool(CameraTool); // æ›´æ”¹å½“å‰ä½¿ç”¨å·¥å…·
 }
 
-// È·¶¨²Ã¼ô ±£´æµÃµ½µÄµãÔÆÖÁdbtree
+// ç¡®å®šè£å‰ª ä¿å­˜å¾—åˆ°çš„ç‚¹äº‘è‡³dbtree
 void SegmentationWidget::check_segment() {
 	if (glWidget == nullptr) {
 		return;
 	}
 	std::cout << "check segement!" << std::endl;
+	auto start = Now_ms();
+	vector<QString> namelist = dbRoot->getSelectedPcdName();
+	if (namelist.size() == 0) {
+		return;
+	}
+	std::shared_ptr<PointCloud> pcd_ = glWidget->createPcd(namelist);
+	// dbRoot add
+	dbRoot->add_pointcloud(pcd_);
+	this->hide();
+	auto end = Now_ms();
+	qDebug() << "Segment Used Time: " << end - start << "ms";
 }

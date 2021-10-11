@@ -10,7 +10,6 @@
 #include <PointCloud/renderingWidget.h>
 
 ToolDrawPolygon::ToolDrawPolygon() {
-	this->enable = false;
 	this->polygon.clear();
 }
 
@@ -19,39 +18,39 @@ ToolDrawPolygon::~ToolDrawPolygon(){
 }
 
 void ToolDrawPolygon::activate() {
-	this->enable = true;
+	this->isActivate = true;
 	this->drawing = true;
 }
 
 void ToolDrawPolygon::deactivate() {
 	reset();
-	this->enable = false;
-	this->drawing = false;
+	this->isActivate = false;
 }
 
-// ÖØÖÃ
+// é‡ç½®
 void ToolDrawPolygon::reset() {
 	this->polygon.clear();
 	this->drawing = false;
 }
 
-// ÔÝÍ£»æÖÆ
+// æš‚åœç»˜åˆ¶
 void ToolDrawPolygon::suspend() {
 	this->drawing = false;
 }
 
-// »Ö¸´»æÖÆ
+// æ¢å¤ç»˜åˆ¶
 void ToolDrawPolygon::resume() {
 	this->drawing = true;
 }
 
+// èŽ·å–Toolç±»åž‹
 int ToolDrawPolygon::getToolType() {
 	return type;
 }
 
-// ¼üÊó²Ù×÷
+// é”®é¼ æ“ä½œ
 void ToolDrawPolygon::mousePress(QMouseEvent *e) {
-	if (!enable) {
+	if (!isActivate) {
 		return;
 	}
 	if (drawing && e->buttons() == Qt::LeftButton) {
@@ -61,7 +60,7 @@ void ToolDrawPolygon::mousePress(QMouseEvent *e) {
 }
 
 void ToolDrawPolygon::mouseMove(QMouseEvent *e) {
-	if (!enable) {
+	if (!isActivate) {
 		return;
 	}
 	if (drawing) {
@@ -77,34 +76,52 @@ void ToolDrawPolygon::mouseMove(QMouseEvent *e) {
 }
 
 void ToolDrawPolygon::mouseDoubleClick(QMouseEvent *e) {
-	if (!enable) {
+	if (!isActivate) {
 		return;
 	}
 	if (drawing) {
 		polygon.pop_back();
-		suspend(); // ÔÝÍ£»æÖÆ
+		suspend(); // æš‚åœç»˜åˆ¶
 	}
 }
 
-void ToolDrawPolygon::draw(QPainter *painter) {
-	if (!enable) {
+// é”®ç›˜äº‹ä»¶
+void ToolDrawPolygon::keyPress(QKeyEvent *e) {
+	if (!isActivate) {
 		return;
 	}
+	if (e->key() == Qt::Key_Escape) {
+		this->deactivate();
+	}
+}
+
+// QPainter ç»˜åˆ¶
+void ToolDrawPolygon::draw(QPainter *painter) {
+	if (!isActivate) {
+		return;
+	}
+	// Text
+	auto device = painter->device();
+	int width = device->width();
+	int height = device->height();
+	painter->setPen(QPen(Qt::white, 1));
+	// çŠ¶æ€æ˜¾ç¤º
+	painter->drawText(QRectF(QPointF(width / 2.0 - 150, 10), QPointF(width / 2.0 + 150, 30)), "Drawing Polygon ... Press [ESC] Exit");
+
 	if (polygon.size() > 0) {
 		painter->setPen(QPen(Qt::green, 1));
+		painter->setBrush(QBrush(QColor(0, 255, 0, 120)));
 		QPolygon pts(polygon.size());
 		for (int i = 0; i < polygon.size(); i++) {
 			pts.putPoints(i, 1, polygon[i].x, polygon[i].y);
 		}
 		pts.putPoints(polygon.size(), 1, polygon[0].x, polygon[0].y);
-		painter->drawConvexPolygon(pts);
-		painter->drawText(50, 50, QString("Drawing"));
-		painter->end();
+		painter->drawPolygon(pts);
 	}
 }
 
 void ToolDrawPolygon::gl_draw() {
-	if (!enable) {
+	if (!isActivate) {
 		return;
 	}
 }

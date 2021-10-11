@@ -30,6 +30,10 @@ GLBuffer::GLBuffer(GLuint VBO) {
 	this->VBO = VBO;
 }
 
+void GLBuffer::bind() {
+	glBindVertexArray(this->VAO);
+}
+
 void GLBuffer::set(const void *vertices, GLsizei size, vector<GLBufferAttribute> attributes, int count) {
 	this->attributes = attributes;
 	this->vertexCount = count;
@@ -84,9 +88,14 @@ void GLBuffer::setInterleaved(vector<GLBufferAttribute> attributes) {
 
 	//Ω‚∞ÛVAO
 	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 GLBuffer::~GLBuffer() {
-	glDeleteBuffers(1, &VBO);
+	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glInvalidateBufferData(VAO);
+	glInvalidateBufferData(VBO);
 	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
 }

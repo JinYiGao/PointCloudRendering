@@ -14,6 +14,16 @@
  // 互相包含 提前声明 在cpp内引用头文件
 class RenderWidget;
 
+enum CameraType {
+	Camera2D = 0,
+	Camera3D
+};
+
+enum CameraProjection {
+	Ortho = 0,
+	Perspective
+};
+
 class ToolCamera :public Tool {
 	Q_OBJECT
 
@@ -22,7 +32,13 @@ public:
 	ToolCamera(RenderWidget *glWidget);
 	~ToolCamera();
 
+	void setCameraType(int cameratype); // 设置相机类型
+	void setProjection(int projMethod); // 设置相机投影方式 正射或者透视投影 
+
 	// 重写父类虚函数
+	void suspend() override;
+	void resume() override;
+
 	int getToolType() override;
 
 	void mousePress(QMouseEvent *e) override;
@@ -34,5 +50,7 @@ protected:
 	RenderWidget *glWidget = nullptr;
 	Camera *camera = nullptr;
 
-	int type = CameraTool;
+	int toolType = CameraTool;
+	int cameraType = Camera3D;
+	bool isSuspend = false;
 };

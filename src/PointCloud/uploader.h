@@ -18,18 +18,18 @@
 #include <Base/utils.h>
 #include <Base/shader.h>
 #include <PointCloud/pointclouds.h>
-#include <Base/shader.h>
 
 using namespace std;
 
 class UpLoader : protected QOpenGLFunctions_4_5_Core {
 public:
-	PointCloud *pcd; // 读取的点云
+	std::shared_ptr<PointCloud> pcd = nullptr; // 读取的点云
 	uint64_t prime = 0; //质数 
 
 	vector<GLuint> vertexBuffers; //顶点缓冲区集合
 	int maxPointsPerBuffer = 100000000; // 每个缓冲区最大数量点
 	int bytesPerBuffer = 20; // 3 * float(4 bytes) + 4 * int_8(1 byte)
+	GLuint indexBuffer; // 索引存储缓冲
 
 	int defaultChunkSize = 500000; //上传的一个chunk的大小(点数量)
 	GLuint Chunk16B; // 单个chunk缓冲区
@@ -43,7 +43,8 @@ public:
 
 
 public:
-	UpLoader(PointCloud *pcd); // 构造函数
+	UpLoader(std::shared_ptr<PointCloud> &pcd); // 构造函数
+	~UpLoader();
 
 	int uploadNextChunk(); //上传点云数据至GPU 
 	Eigen::MatrixXf getNextChunk(); // 获取下一个chunk的点(xyzrgb)

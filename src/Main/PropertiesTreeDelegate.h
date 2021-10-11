@@ -4,7 +4,7 @@
  * @Author: JinYiGao
  * @Date: 2021-07-21 20:41:52
  * @LastEditors: JinYiGao
- * @LastEditTime: 2021-07-22 19:05:34
+ * @LastEditTime: 2021-07-31 23:36:19
  */
 #pragma once
 
@@ -38,20 +38,20 @@ public:
 	QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
 	void setEditorData(QWidget *editor, const QModelIndex &index) const;
 
-	void fillModel(PointCloud *pcd); // 视图填充数据
+	void fillModel(std::shared_ptr<PointCloud> &pcd); // 视图填充数据
 
 	void unbind();
 
-	PointCloud *getCurrentPcd();
+	std::shared_ptr<PointCloud> getCurrentPcd();
 private:
-	PointCloud *currentPcd = nullptr;
+	std::shared_ptr<PointCloud> currentPcd = nullptr;
 	QStandardItemModel* m_model;
 	QAbstractItemView* m_view;
 
 	void addSeparator(const QString& title);
 	void appendRow(QStandardItem* leftItem, QStandardItem* rightItem, bool openPersistentEditor = false);
 	
-	void fillWithPcd(PointCloud *pcd);
+	void fillWithPcd(std::shared_ptr<PointCloud> &pcd);
 
 	bool isWideEditor(int itemData) const; // 根据role判断该item whether the editor is wide (i.e. spans on two columns) or not
 

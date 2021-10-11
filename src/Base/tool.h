@@ -15,10 +15,28 @@
 #include <QPainter>
 
 enum ToolType {
-	CameraTool = 0, // 相机工具
-	DrawPolygonTool, // 多边形绘制工具
+	CameraTool = 0,    // 相机工具
+	DrawPolygonTool,   // 多边形绘制工具
 	DrawRectangleTool, // 矩形绘制工具
+	DrawPolylineTool,  // 多段线绘制工具
+	DeletePcdTool,     // 点云框选删除工具
+	AddPcdTool,        // 点云追加添加工具
+	PickPointTool,     // 点云选择(选点)工具
+	EditLabelTool,     // 点云类别修改工具
+	DrawProfileTool,   // 绘制剖线工具
 	NoneTool = 0xFFFFFFFF // 不选择任何工具
+};
+
+struct Point {
+	float x;
+	float y;
+	Point() {
+
+	}
+	Point(float x, float y) {
+		this->x = x;
+		this->y = y;
+	}
 };
 
 class Tool;
@@ -54,6 +72,7 @@ public:
 	void wheelEvent(QWheelEvent *e);
 	void keyDown(QKeyEvent *e); // 键盘按下
 	void keyUp(QKeyEvent *e); // 键盘抬起
+	void keyPress(QKeyEvent *e); // 键盘完整按下事件
 
 protected:
 	std::map<int, Tool*> tools; // tools
@@ -91,4 +110,5 @@ public:
 	virtual void wheelEvent(QWheelEvent *e) {};
 	virtual void keyDown(QKeyEvent *e) {}; // 键盘按下
 	virtual void keyUp(QKeyEvent *e) {}; // 键盘抬起
+	virtual void keyPress(QKeyEvent *e) {}; // 键盘完整按下事件
 };

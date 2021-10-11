@@ -2,7 +2,7 @@
 
 #extension GL_NV_gpu_shader5 : enable
 
-uniform int MaxPointsPerBuffer;
+uniform int MaxPointsPerBuffer; // 每个buffer的最大点数
 
 layout(local_size_x = 32, local_size_y = 1) in;
 
@@ -67,12 +67,6 @@ void main(){
 	}
 
 	uint globalInputIndex = inputIndex + uOffset;
-
-	//double p1 = permute(double(globalInputIndex), uPrime);
-	//double p2 = permute(p1, uPrime);
-	//uint targetIndex = uint(p2);
-
-	//targetIndex = globalInputIndex;
 
 	int64_t primeI64 = int64_t(uPrime);
 	int64_t t = permuteI(int64_t(globalInputIndex), primeI64);

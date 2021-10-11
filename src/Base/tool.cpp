@@ -141,6 +141,12 @@ void ToolManager::keyUp(QKeyEvent *e) {
 	}
 }
 
+void ToolManager::keyPress(QKeyEvent *e) {
+	if (currentTool && !Suspended) {
+		currentTool->keyPress(e);
+	}
+}
+
 Tool::Tool() { 
 	setParent(nullptr); 
 }

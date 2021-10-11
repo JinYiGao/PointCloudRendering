@@ -34,7 +34,7 @@ SET(CMAKE_AUTORCC ON)
 # QT5_WRAP_UI(WRAP_FILES ${UI_FILES})
 
 #find_package 获取QT5中的Core、Gui等组件
-find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets )
+find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Charts)
 
 #添加矩阵运算库eigen
 find_package(Eigen3 REQUIRED)

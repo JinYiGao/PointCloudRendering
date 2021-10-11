@@ -1,37 +1,40 @@
-/*
+ï»¿/*
  * @Descripttion: 
  * @version: 
  * @Author: JinYiGao
  * @Date: 2021-07-19 15:44:30
  * @LastEditors: JinYiGao
- * @LastEditTime: 2021-07-19 15:44:30
+ * @LastEditTime: 2021-07-31 23:33:25
  */
 #include <progressiveRender.h>
 #include <PointCloud/renderingWidget.h>
+#include <Eigen/Dense>
+#include <Eigen/Cholesky>
+#include <omp.h>
 
 static Eigen::MatrixXf getColorStrip() {
 	Eigen::MatrixXf colors;
-	float colorBarLength = 343.0;//ÉèÖÃÑÕÉ«ÌõµÄ³¤¶È
+	float colorBarLength = 343.0;
 	colors.resize(4, colorBarLength);
-	//------ÉèÖÃÎªjetÑÕÉ«Ìõ---------//
+
 	float tempLength = colorBarLength / 4;
-	for (int i = 0; i < tempLength / 2; i++)// jet
+	for (int i = 0; i < tempLength / 2; i++)
 	{
 		colors.col(i) = Eigen::Vector4f(0, 0, (tempLength / 2 + i) / tempLength, 1);
 	}
-	for (int i = tempLength / 2 + 1; i < tempLength / 2 + tempLength; i++)// jet
+	for (int i = tempLength / 2 + 1; i < tempLength / 2 + tempLength; i++)
 	{
 		colors.col(i) = Eigen::Vector4f(0, (i - tempLength / 2) / tempLength, 1, 1);
 	}
-	for (int i = tempLength / 2 + tempLength + 1; i < tempLength / 2 + 2 * tempLength; i++)// jet
+	for (int i = tempLength / 2 + tempLength + 1; i < tempLength / 2 + 2 * tempLength; i++)
 	{
 		colors.col(i) = Eigen::Vector4f((i - tempLength - tempLength / 2) / tempLength, 1, (tempLength * 2 + tempLength / 2 - i) / tempLength, 1);
 	}
-	for (int i = tempLength / 2 + 2 * tempLength + 1; i < tempLength / 2 + 3 * tempLength; i++)// jet
+	for (int i = tempLength / 2 + 2 * tempLength + 1; i < tempLength / 2 + 3 * tempLength; i++)
 	{
 		colors.col(i) = Eigen::Vector4f(1, (tempLength * 3 + tempLength / 2 - i) / tempLength, 0, 1);
 	}
-	for (int i = tempLength / 2 + 3 * tempLength + 1; i < colorBarLength; i++)// jet
+	for (int i = tempLength / 2 + 3 * tempLength + 1; i < colorBarLength; i++)
 	{
 		colors.col(i) = Eigen::Vector4f((colorBarLength - i + tempLength / 2) / tempLength, 0, 0, 1);
 	}
@@ -39,7 +42,7 @@ static Eigen::MatrixXf getColorStrip() {
 	return colors;
 }
 
-ProgressiveRender::ProgressiveRender(RenderWidget *glWidget, PointCloud *pcd) {
+ProgressiveRender::ProgressiveRender(RenderWidget *glWidget, std::shared_ptr<PointCloud> &pcd) {
 	initializeOpenGLFunctions();
 
 	this->glWidget = glWidget;
@@ -55,6 +58,9 @@ ProgressiveRender::ProgressiveRender(RenderWidget *glWidget, PointCloud *pcd) {
 	this->createVBOShader = glWidget->createVBOShader;
 
 	this->SegmentShader = glWidget->SegmentShader;
+	this->resumeSegmentShader = glWidget->resumeSegmentShader;
+
+	this->selectShader = glWidget->selectShader;
 
 	this->name = pcd->name;
 
@@ -66,27 +72,48 @@ ProgressiveRender::ProgressiveRender(RenderWidget *glWidget, PointCloud *pcd) {
 }
 
 ProgressiveRender::~ProgressiveRender() {
-
-}
-
-// ³õÊ¼»¯µãÔÆ
-void ProgressiveRender::init() {
-	std::cout << "PointsNum: " << pcd->points_num << std::endl;
-	// ÊÍ·ÅOpenGL»º³å(Ô­ÏÈµãÔÆÊı¾İ»º³åÇø)
+	glWidget->makeCurrent();
 	for (int i = 0; i < pointcloudBuffers.size(); i++) {
 		glDeleteBuffers(1, &pointcloudBuffers[i]->VBO);
 		glDeleteVertexArrays(1, &pointcloudBuffers[i]->VAO);
+		delete pointcloudBuffers[i];
+	}
+	for (int i = 0; i < uniformBlocks.size(); i++) {
+		delete uniformBlocks[i];
+	}
+	glDeleteBuffers(1, &upload->indexBuffer);
+	glDeleteBuffers(1, &upload->Chunk4B);
+	glDeleteBuffers(1, &upload->Chunk16B);
+	delete upload;
+	delete renderState;
+}
+
+void ProgressiveRender::init() {
+	glWidget->makeCurrent();
+	fbo->bind();
+	std::cout << "PointsNum: " << pcd->points_num << std::endl;
+	
+	for (int i = 0; i < pointcloudBuffers.size(); i++) {
+		glDeleteBuffers(1, &pointcloudBuffers[i]->VBO);
+		glDeleteVertexArrays(1, &pointcloudBuffers[i]->VAO);
+		delete pointcloudBuffers[i];
 	}
 	pointcloudBuffers.clear();
 	//upload Data
+	if (upload != nullptr) {
+		glDeleteBuffers(1, &upload->indexBuffer);
+		glDeleteBuffers(1, &upload->Chunk4B);
+		glDeleteBuffers(1, &upload->Chunk16B);
+		delete upload;
+	}
 	upload = new UpLoader(pcd);
-	// --------------------------- ¾­¼ÆËã×ÅÉ«Æ÷´òÂÒ¶¥µãºóµãÔÆ»º³åÇø¹ÜÀí -------------------------------
+	// ---------------------------  -------------------------------
 	vector<GLBufferAttribute> pcdAttributes;
-	GLBufferAttribute pcdAttribute1("position", 0, 3, GL_FLOAT, GL_FALSE, 20, 0);
+	GLBufferAttribute pcdAttribute1("position", 0, 3, GL_FLOAT, GL_FALSE, 20, 0); // xyz 12å­—èŠ‚
 	pcdAttributes.emplace_back(pcdAttribute1);
-	GLBufferAttribute pcdAttribute2("color", 1, 1, GL_INT, GL_FALSE, 20, 12);
+	GLBufferAttribute pcdAttribute2("attribute", 1, 1, GL_INT, GL_FALSE, 20, 12); // coloræˆ–å…¶ä»–è‡ªå®šä¹‰å±æ€§ 4å­—èŠ‚
 	pcdAttributes.emplace_back(pcdAttribute2);
-	GLBufferAttribute pcdAttribute3("show", 2, 1, GL_INT, GL_FALSE, 20, 16);
+	GLBufferAttribute pcdAttribute3("show", 2, 1, GL_INT, GL_FALSE, 20, 16); // showå±æ€§ 4å­—èŠ‚(shaderé‡Œåªèƒ½4å­—èŠ‚)
 	pcdAttributes.emplace_back(pcdAttribute3);
 
 	int maxPointsPerBuffer = upload->maxPointsPerBuffer;
@@ -101,48 +128,48 @@ void ProgressiveRender::init() {
 	}
 }
 // ------------------------------------------------------------------------------- Core Method --------------------------------------------------------------------------------------------
-// ½¥½øÊ½äÖÈ¾
 void ProgressiveRender::renderPointCloudProgressive() {
 	if (!pcd->getVisible()) {
 		return;
 	}
 
+	// å±æ€§æ›´æ”¹ ä¸Šè½½å±æ€§
 	if (pcd->getAttributeMode() != currentAttributeMode) {
 		// uploadAttributeMode
-		uploadAttribute();
+		int AttributeMode = pcd->getAttributeMode();
+		uploadAttribute(AttributeMode);
+		this->currentAttributeMode = AttributeMode;
 	}
 
-	// ÉùÃ÷Æ¬¶Î×ÅÉ«Æ÷µÄÊä³ö (locationÖ¸¶¨bufferË÷Òı) Ğ´Èëµ½Ö¡»º³åfboÄÚµÄÁ½¸öÎÆÀí¸½¼şÖĞ
 	GLenum buffers[2] = {
 		GL_COLOR_ATTACHMENT0,
 		GL_COLOR_ATTACHMENT1
 	};
 	glDrawBuffers(2, buffers);
 
-	reproject(); // ÖØÍ¶Ó°
-	fillFixed(); // ¿Õ¶´Ìî³ä
-	createVBO(); // ´´½¨ĞÂµÄÖØÍ¶Ó°VBO
+	reproject(); // é‡æŠ•å½±
+	fillFixed(); // ç©ºæ´å¡«å……
+	createVBO(); // åˆ›å»ºVBO
 
 	glUseProgram(0);
-	// ÆôÓÃÉî¶È»º³åĞ´Èë
+	
 	glDepthMask(true);
 }
 
-// ÖØÍ¶Ó°
 void ProgressiveRender::reproject() {
 	ProgressiveRenderState *state = getRenderState();
 
 	reprojectShader->bind();
-	Eigen::Matrix4f transform = camera->getTransform() * pcd->getModelMatrix();
+	Eigen::Matrix4f transform = camera->getTransform();
 	int ATTRIBUTE_MODE = pcd->getAttributeMode();
 	float pointSize = pcd->getPointSize();
-	// ÑÕÉ«´ÓÎÆÀí²ÉÑù ·ñÔòÖ±½Ó´ÓÔ­Ê¼´«ÈëÊı¾İ¶ÁÈ¡
+	// 
 	if (ATTRIBUTE_MODE == FROM_GRADIENT) {
 		reprojectShader->setUniformValue("uGradient", 0);
 		gradientImage->bind(0);
 	}
-	// ÑÕÉ«°´ÕÕÉ«´ø²ÉÑù °´Ç¿¶È×ÅÉ«
-	if (ATTRIBUTE_MODE == FROM_IDENTISITY) {
+	// 
+	if (ATTRIBUTE_MODE == FROM_INTENSITY) {
 		int maxValue = pcd->getmaxIdensity();
 		int minValue = pcd->getminIdensity();
 		void* colorStrip = pcd->getColorStrip();
@@ -153,27 +180,28 @@ void ProgressiveRender::reproject() {
 	reprojectShader->setUniformValue("uAttributeMode", ATTRIBUTE_MODE);
 	reprojectShader->setUniformValue("uWorldViewProj", transform);
 	reprojectShader->setUniformValue("pointSize", pointSize);
-	// »æÖÆ
+	// 
 	glBindVertexArray(state->reprojectBuffer->VAO);
 	glBindBuffer(GL_DRAW_INDIRECT_BUFFER, state->IndirectCommand);
-	glDrawArraysIndirect(GL_POINTS, 0); // ¼ä½Ó»æÖÆ »æÖÆÃüÁîÓÉ»º´æ»ñµÃ
+	glDrawArraysIndirect(GL_POINTS, 0); //
+
 	glBindVertexArray(0);
+	reprojectShader->unbind();
 }
 
-// ¿Õ¶´Ìî³ä
 void ProgressiveRender::fillFixed() {
 	ProgressiveRenderState *state = getRenderState();
 	fillShader->bind();
-	Eigen::Matrix4f transform = camera->getTransform() * pcd->getModelMatrix();
+	Eigen::Matrix4f transform = camera->getTransform();
 	int ATTRIBUTE_MODE = pcd->getAttributeMode();
 	float pointSize = pcd->getPointSize();
-	// ÑÕÉ«´ÓÎÆÀí²ÉÑù ·ñÔòÖ±½Ó´ÓÔ­Ê¼´«ÈëÊı¾İ¶ÁÈ¡
+	// 
 	if (ATTRIBUTE_MODE == FROM_GRADIENT) {
 		fillShader->setUniformValue("uGradient", 0);
 		gradientImage->bind(0);
 	}
-	// ÑÕÉ«°´ÕÕÉ«´ø²ÉÑù °´Ç¿¶È×ÅÉ«
-	if (ATTRIBUTE_MODE == FROM_IDENTISITY) {
+	// 
+	if (ATTRIBUTE_MODE == FROM_INTENSITY) {
 		int maxValue = pcd->getmaxIdensity();
 		int minValue = pcd->getminIdensity();
 		void* colorStrip = pcd->getColorStrip();
@@ -185,29 +213,29 @@ void ProgressiveRender::fillFixed() {
 	fillShader->setUniformValue("uWorldViewProj", transform);
 	fillShader->setUniformValue("pointSize", pointSize);
 
-	// »æÖÆ(´òÂÒºóµÄ»º³åÇø)
-	int budget = 1000000; // µ¥´ÎÌî³äÔ¤Ëã
-	int numPoints = pcd->points_num; // µãÔÆ×ÜÁ¿
+	// 
+	int budget = 1000000; // 
+	int numPoints = pcd->points_num; // 
 	if (pointcloudBuffers.size() == 1) {
 		GLBuffer *pcdBuffer = pointcloudBuffers[0];
 		glBindVertexArray(pcdBuffer->VAO);
-		int left = numPoints - state->fillOffset; // Ê£ÏÂÎ´äÖÈ¾¹ıµÄµã = ×ÜÁ¿ - Æ«ÒÆ
+		int left = numPoints - state->fillOffset; // 
 		int count = min(left, budget);
 		fillShader->setUniformValue("uOffset", 0);
 		glDrawArrays(GL_POINTS, state->fillOffset, count);
-		// ¸üĞÂÆ«ÒÆ
+		// 
 		state->fillOffset = (state->fillOffset + count) % numPoints;
 	}
 	else {
-		// µãÔÆÊıÁ¿¼«¶à ´æÔÚ¶à¸ö»º³åÇøµÄÇé¿ö
+		// 
 		int maxBufferSize = pointcloudBuffers[0]->vertexCount; // 1000,000,000
-		vector<int> cumBufferOffsets = { 0 }; // ÀÛ»ı»º³åÇøÆğÊ¼Æ«ÒÆ buffer1: 0 buffer2: 0 + sizeof(buffer1) ...
-		vector<int> cumBufferSizes = { pointcloudBuffers[0]->vertexCount }; // ÀÛ»ı»º³åÇø´óĞ¡
+		vector<int> cumBufferOffsets = { 0 }; // 
+		vector<int> cumBufferSizes = { pointcloudBuffers[0]->vertexCount }; // 
 		for (int i = 1; i < pointcloudBuffers.size(); i++) {
 			cumBufferOffsets.emplace_back(cumBufferOffsets[i - 1] + pointcloudBuffers[i - 1]->vertexCount);
 			cumBufferSizes.emplace_back(cumBufferSizes[i - 1] + pointcloudBuffers[i]->vertexCount);
 		}
-		// ¸ù¾İÆ«ÒÆ¼ÆËãµ±Ç°äÖÈ¾ÄÄ¸öbuffer
+		//
 		int bufferIndex = int(state->fillOffset / maxBufferSize);
 		GLBuffer *pcdBuffer = pointcloudBuffers[bufferIndex];
 		int count = min(budget, cumBufferSizes[bufferIndex] - state->fillOffset);
@@ -217,28 +245,29 @@ void ProgressiveRender::fillFixed() {
 		state->fillOffset = (state->fillOffset + count) % numPoints;
 	}
 	glBindVertexArray(0);
+	fillShader->unbind();
 }
 
-// ´´½¨ĞÂµÄvbo ¹©ÖØÍ¶Ó°Ê¹ÓÃ
 void ProgressiveRender::createVBO() {
 	ProgressiveRenderState *state = getRenderState();
-	// °ó¶¨×ÅÉ«Æ÷
+	// 
 	createVBOShader->bind();
-	UINT32 indirectData[5] = { 0, 1, 0, 0, 0 }; // countÓÉÔ­×Ó¼ÆÊıÆ÷¼ÆÊıµÃµ½ 1 Îª¶àÊµÀıäÖÈ¾¸öÊı
+	UINT32 indirectData[5] = { 0, 1, 0, 0, 0 }; // 
 	glNamedBufferSubData(state->IndirectCommand, 0, sizeof(indirectData), indirectData);
-	// °ó¶¨ÎÆÀíµ½ImageÊµÏÖ¶ÁĞ´
+	// 
 	createVBOShader->setUniformValue("uIndices", 0);
 	createVBOShader->setUniformValue("maxPointsPerBuffer", upload->maxPointsPerBuffer);
+	// ä»çº¹ç†textureåˆ›å»ºä¸€ä¸ªImage
 	glBindImageTexture(0, fbo->textures[1], 0, GL_FALSE, 0, GL_READ_WRITE, GL_RGBA8);
-	// °ó¶¨¼ä½Ó»æÖÆÃüÁî»º³åµ½×ÅÉ«Æ÷ ½øĞĞĞ´ÈëĞŞ¸Ä
+	// 
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, state->IndirectCommand);
-	// °ó¶¨ÖØÍ¶Ó°Êı¾İVBOµ½×ÅÉ«Æ÷½øĞĞÊı¾İĞ´Èë
+	// 
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, state->reprojectBuffer->VBO);
-	// °ó¶¨µãÔÆÊı¾İ»º³åµ½×ÅÉ«Æ÷½øĞĞÊı¾İÀ´Ô´¶ÁÈ¡
+	// 
 	for (int i = 0; i < pointcloudBuffers.size(); i++) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, pointcloudBuffers[i]->VBO);
 	}
-	// ±¾µØ¹¤×÷×é´óĞ¡
+	// 
 	struct localSize {
 		int x = 16;
 		int y = 16;
@@ -266,17 +295,18 @@ void ProgressiveRender::createVBO() {
 		groups[1] *= 4;
 	}
 
-	// ÄÚ´æÆÁÕÏ
+	//
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 	glDispatchCompute(groups[0], groups[1], groups[2]);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-	// ½â°ó»º³åÇø
+	// 
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
 	for (int i = 0; i < pointcloudBuffers.size(); i++) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, 0);
 	}
+	createVBOShader->unbind();
 }
 
 ProgressiveRenderState* ProgressiveRender::getRenderState() {
@@ -286,19 +316,25 @@ ProgressiveRenderState* ProgressiveRender::getRenderState() {
 	return renderState;
 }
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-// ¼ÆËã×ÅÉ«Æ÷¿ØÖÆ²Ã¼ô
-void ProgressiveRender::Segment(vector<Point> polygon) {
+// è£å‰ª åˆ é™¤
+// è£å‰ªåŒºåŸŸ è£å‰ªæ¨¡å¼ è£å‰ªæ—¶çš„ç›¸æœºè½¬æ¢çŸ©é˜µ(å› ä¸ºå›é€€çš„æ—¶å€™éœ€è¦ä¿æŒå‰åè½¬æ¢çŸ©é˜µä¸€è‡´)
+void ProgressiveRender::Segment(vector<Point> polygon, int Selectmode, Eigen::Matrix4f segmentTransform) {
 	std::cout << "Start Segement!" << std::endl;
+	// polygonè½¬æ¢åˆ°æ ‡å‡†åŒ–è®¾å¤‡åæ ‡ä¸‹
 	for (int i = 0; i < polygon.size(); i++) {
 		polygon[i].x = polygon[i].x / (float)window->width * 2 - 1.0;
 		polygon[i].y = - polygon[i].y / (float)window->height * 2 + 1.0;
-		std::cout << polygon[i].x << "," << polygon[i].y << std::endl;
+		//std::cout << polygon[i].x << "," << polygon[i].y << std::endl;
 	}
 	SegmentShader->bind();
-	Eigen::Matrix4f transform = camera->getTransform() * pcd->getModelMatrix();
-	SegmentShader->setUniformValue("transform", transform);
+	if (segmentTransform.isIdentity()) {
+		segmentTransform = camera->getTransform();
+	}
+	SegmentShader->setUniformValue("transform", segmentTransform);
 	SegmentShader->setUniformValue("maxPointsPerBuffer", upload->maxPointsPerBuffer);
-	// ´«µİpolygonÊı¾İ
+	SegmentShader->setUniformValue("SelectMode", Selectmode);
+
+	// å­˜å‚¨polygonåæ ‡
 	GLuint polygonBuffer;
 	glCreateBuffers(1, &polygonBuffer);
 	glNamedBufferData(polygonBuffer, 4 + polygon.size() * 8, nullptr, GL_STATIC_DRAW);
@@ -306,12 +342,17 @@ void ProgressiveRender::Segment(vector<Point> polygon) {
 	glNamedBufferSubData(polygonBuffer, 0, 4, &num);
 	glNamedBufferSubData(polygonBuffer, 4, polygon.size() * 8, polygon.data());
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, polygonBuffer);
+	
+	// æ— ç¼“å†²åŒºåˆ™åˆ›å»º
+	GLuint selectBuffer = 0;
+	glCreateBuffers(1, &selectBuffer);
+	glNamedBufferData(selectBuffer, pcd->points_num * 4, nullptr, GL_STATIC_DRAW);
 
-	// °ó¶¨µãÔÆÊı¾İ»º³åµ½×ÅÉ«Æ÷½øĞĞÊı¾İÀ´Ô´¶ÁÈ¡
 	for (int i = 0; i < pointcloudBuffers.size(); i++) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, pointcloudBuffers[i]->VBO);
 	}
-	// ±¾µØ¹¤×÷×é´óĞ¡
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, selectBuffer);
+
 	struct localSize {
 		int x = 1024;
 		int y = 1;
@@ -322,24 +363,357 @@ void ProgressiveRender::Segment(vector<Point> polygon) {
 		1,
 		1
 	};
-	// ÄÚ´æÆÁÕÏ
+
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 	glDispatchCompute(groups[0], groups[1], groups[2]);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 
-	// ½â°ó»º³åÇø
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+	for (int i = 0; i < pointcloudBuffers.size(); i++) {
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, 0);
+	}
+	glDeleteBuffers(1, &polygonBuffer);
+	SegmentShader->unbind();
+	//segement = false;
+	selectBufferStack.push(selectBuffer); // selectBufferå‹å…¥æ ˆ
+}
+
+// æ¢å¤è£å‰ªåŒºåŸŸ â€”â€” å¯ä»¥æŒ‡å®šselectBuffer
+void ProgressiveRender::resumeSegment() {
+	if (selectBufferStack.isEmpty()){
+		return;
+	}
+	GLuint selectBuffer = selectBufferStack.pop(); // å‡ºæ ˆ
+
+	resumeSegmentShader->bind();
+	resumeSegmentShader->setUniformValue("maxPointsPerBuffer", upload->maxPointsPerBuffer);
+	
+	for (int i = 0; i < pointcloudBuffers.size(); i++) {
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, pointcloudBuffers[i]->VBO);
+	}
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, selectBuffer);
+
+	struct localSize {
+		int x = 1024;
+		int y = 1;
+	};
+	localSize localsize;
+	int groups[3] = {
+		pcd->points_num / localsize.x + 1,
+		1,
+		1
+	};
+	
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+	glDispatchCompute(groups[0], groups[1], groups[2]);
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+	resumeSegmentShader->unbind();
+
+	glDeleteBuffers(1, &selectBuffer); // é”€æ¯
+}
+
+// æ ¹æ®PolygonåŒºåŸŸé€‰æ‹©ç‚¹äº‘
+// polygonä¸ºå±å¹•åæ ‡
+vector<uint> ProgressiveRender::selectPointsByPolygon(vector<Point> polygon) {
+	std::cout << "Start Select!" << std::endl;
+	// polygonè½¬æ¢åˆ°æ ‡å‡†åŒ–è®¾å¤‡åæ ‡ä¸‹
+	for (int i = 0; i < polygon.size(); i++) {
+		polygon[i].x = polygon[i].x / (float)window->width * 2 - 1.0;
+		polygon[i].y = -polygon[i].y / (float)window->height * 2 + 1.0;
+		//std::cout << polygon[i].x << "," << polygon[i].y << std::endl;
+	}
+
+	selectShader->bind();
+	selectShader->setUniformValue("transform", camera->getTransform());
+	selectShader->setUniformValue("maxPointsPerBuffer", upload->maxPointsPerBuffer);
+	int SelectMode = 0;
+	selectShader->setUniformValue("SelectMode", SelectMode);
+
+	// å­˜å‚¨polygonåæ ‡
+	GLuint polygonBuffer = 0;
+	glCreateBuffers(1, &polygonBuffer);
+	glNamedBufferData(polygonBuffer, 4 + polygon.size() * 8, nullptr, GL_STATIC_DRAW);
+	int num = polygon.size();
+	glNamedBufferSubData(polygonBuffer, 0, 4, &num);
+	glNamedBufferSubData(polygonBuffer, 4, polygon.size() * 8, polygon.data());
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, polygonBuffer);
+
+	// åˆ›å»ºç‚¹äº‘åŒºåŸŸé€‰æ‹©ç‚¹ç´¢å¼•ç¼“å†²åŒº
+	GLuint selectBuffer = 0;
+	glCreateBuffers(1, &selectBuffer);
+	glNamedBufferData(selectBuffer, pcd->points_num * 4, nullptr, GL_DYNAMIC_DRAW);
+	int counter = 0;
+	glNamedBufferSubData(selectBuffer, 0, 4, &counter); // counteråˆå§‹åŒ–ä¸º0
+
+	for (int i = 0; i < pointcloudBuffers.size(); i++) {
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, pointcloudBuffers[i]->VBO);
+	}
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, selectBuffer);
+
+	struct localSize {
+		int x = 1024;
+		int y = 1;
+	};
+	localSize localsize;
+	int groups[3] = {
+		pcd->points_num / localsize.x + 1,
+		1,
+		1
+	};
+
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+	glDispatchCompute(groups[0], groups[1], groups[2]);
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
+	for (int i = 0; i < pointcloudBuffers.size(); i++) {
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, 0);
+	}
+	selectShader->unbind();
+	glDeleteBuffers(1, &polygonBuffer);
+
+	void *data = glMapNamedBuffer(selectBuffer, GL_READ_ONLY);
+	int count = *(int *)(data);
+	qDebug() << "Count: " << count;
+
+	vector<uint> selectIndexList;
+	for (int i = 1; i <= count; i++) {
+		selectIndexList.emplace_back(*((int *)(data)+i));
+	}
+	glUnmapNamedBuffer(selectBuffer);
+	glDeleteBuffers(1, &selectBuffer);
+
+	return selectIndexList;
+}
+
+// æ ¹æ®PolylineåŒºåŸŸé€‰æ‹©ç‚¹äº‘
+vector<int> ProgressiveRender::selectPointsByPolyline(vector<Point> polyline, vector<Point> &gridPolyline) {
+	qDebug() << "Start Select Polyline Pts";
+	// polylineè½¬æ¢åˆ°å±å¹•ä¸­å¿ƒå³æ‰‹åæ ‡ç³»ä¸‹
+	for (int i = 0; i < polyline.size(); i++) {
+		polyline[i].x = polyline[i].x - (float)window->width / 2.0;
+		polyline[i].y = (float)window->height / 2.0 - polyline[i].y;
+	}
+
+	// æ …æ ¼åŒ– polyline  AX + BY + C = 0
+	for (int i = 0; i < polyline.size() - 1; i++) {
+		float x1 = polyline[i].x;
+		float x2 = polyline[i + 1].x;
+		float y1 = polyline[i].y;
+		float y2 = polyline[i + 1].y;
+		float A = y2 - y1;
+		float B = x1 - x2;
+		float C = x2 * y1 - x1 * y2;
+		if (abs(x2 - x1) >= abs(y2 - y1)) {
+			for (int j = x1; x1 < x2 ? j < x2 : j > x2; x1 < x2 ? j++ : j--) {
+				float x = j;
+				float y = -(A*x + C) / B;
+				gridPolyline.emplace_back(Point(x, y));
+			}
+		}
+		else if (abs(x2 - x1) < abs(y2 - y1)) {
+			for (int j = y1; y1 < y2 ? j < y2 : j > y2; y1 < y2 ? j++ : j--) {
+				float y = j;
+				float x = -(B * y + C) / A;
+				gridPolyline.emplace_back(Point(x, y));
+			}
+		}
+		
+		gridPolyline.emplace_back(polyline[i + 1]);
+	}
+
+	selectShader->bind();
+	selectShader->setUniformValue("transform", camera->getTransform());
+	selectShader->setUniformValue("maxPointsPerBuffer", upload->maxPointsPerBuffer);
+	int SelectMode = 2;
+	selectShader->setUniformValue("SelectMode", SelectMode);
+
+	// å­˜å‚¨æ …æ ¼åŒ–åpolylineå±å¹•åƒç´ åæ ‡
+	GLuint polylineBuffer = 0;
+	glCreateBuffers(1, &polylineBuffer);
+	glNamedBufferData(polylineBuffer, 12 + gridPolyline.size() * 8, nullptr, GL_STATIC_DRAW);
+	int num = gridPolyline.size();
+	glNamedBufferSubData(polylineBuffer, 0, 4, &(window->width));
+	glNamedBufferSubData(polylineBuffer, 4, 8, &(window->height));
+	glNamedBufferSubData(polylineBuffer, 8, 12, &num);
+	glNamedBufferSubData(polylineBuffer, 12, gridPolyline.size() * 8, gridPolyline.data());
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, polylineBuffer); // binding = 2
+
+	// åˆ›å»ºç‚¹äº‘åŒºåŸŸé€‰æ‹©ç‚¹ç´¢å¼•ç¼“å†²åŒº
+	GLuint selectBuffer = 0;
+	vector<int> select;
+	select.resize(num, -1);
+	glCreateBuffers(1, &selectBuffer);
+	glNamedBufferData(selectBuffer, 4 + num * 4, nullptr, GL_DYNAMIC_DRAW);
+	int counter = 0;
+	glNamedBufferSubData(selectBuffer, 0, 4, &counter); // counteråˆå§‹åŒ–ä¸º0
+	glNamedBufferSubData(selectBuffer, 4, num * 4, select.data()); // counteråˆå§‹åŒ–ä¸º0
+
+	for (int i = 0; i < pointcloudBuffers.size(); i++) {
+		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, pointcloudBuffers[i]->VBO);
+	}
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, selectBuffer);
+
+	struct localSize {
+		int x = 1024;
+		int y = 1;
+	};
+	localSize localsize;
+	int groups[3] = {
+		pcd->points_num / localsize.x + 1,
+		1,
+		1
+	};
+
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+	glDispatchCompute(groups[0], groups[1], groups[2]);
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, 0);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, 0);
 	for (int i = 0; i < pointcloudBuffers.size(); i++) {
 		glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3 + i, 0);
 	}
-	glDeleteBuffers(1, &polygonBuffer);
-	//segement = false;
+	selectShader->unbind();
+	glDeleteBuffers(1, &polylineBuffer);
+
+	void *data = glMapNamedBuffer(selectBuffer, GL_READ_ONLY);
+	int count = *(int *)(data);
+	qDebug() << "Count: " << count;
+
+	vector<int> selectIndexList;
+	for (int i = 1; i <= num; i++) {
+		selectIndexList.emplace_back(*((int *)(data)+i));
+	}
+	glUnmapNamedBuffer(selectBuffer);
+	glDeleteBuffers(1, &selectBuffer);
+
+	return selectIndexList;
 }
 
-// ÉÏ´«Ìæ»»ÊôĞÔÊı¾İ
-void ProgressiveRender::uploadAttribute() {
-	int AttributeMode = pcd->getAttributeMode();
+// æ ¹æ®selectBufferå†…åˆ›å»ºç‚¹äº‘
+std::shared_ptr<PointCloud> ProgressiveRender::createPcdFromBuffer() {
+	if (selectBufferStack.isEmpty()) {
+		return nullptr;
+	}
+	GLuint selectBuffer = selectBufferStack.pop(); // å‡ºæ ˆ(ä¼šåœ¨å¤–éƒ¨æ¡ä»¶é™åˆ¶åªå…è®¸æ¡†é€‰ä¸€æ¬¡)
+
+	std::shared_ptr<PointCloud> pcd_(new PointCloud());
+	// è·å–selectBufferæŒ‡é’ˆ
+	void *data = glMapNamedBuffer(selectBuffer, GL_READ_ONLY);
+	vector<uint> indexlist; // é€‰å–çš„æ‰“ä¹±åç´¢å¼•é›†åˆ
+	vector<uint> remainIndexlist; // å‰©ä½™çš„æ‰“ä¹±åç‚¹ç´¢å¼•
+	auto start = Now_ms();
+	for (int i = 0; i < pcd->points_num; i++) {
+		int index = *((int *)(data)+i);
+		if (index != -1) {
+			indexlist.emplace_back(index);
+		}
+		else {
+			remainIndexlist.emplace_back(i);;
+		}
+	}
+	glUnmapNamedBuffer(selectBuffer);
+
+	pcd_->points_num = indexlist.size();
+	// Attribute
+	pcd_->position.resize(3, pcd_->points_num);
+	pcd_->colors.resize(4, pcd_->points_num);
+	pcd_->labels.resize(1, pcd_->points_num);
+	pcd_->intensity.resize(1, pcd_->points_num);
+
+	pcd->points_num = remainIndexlist.size();
+	Eigen::MatrixXf position;
+	Eigen::MatrixXi_8 colors;
+	Eigen::MatrixXi labels;
+	Eigen::MatrixXi intensity;
+	position.resize(3, pcd->points_num);
+	colors.resize(4, pcd->points_num);
+	labels.resize(1, pcd->points_num);
+	intensity.resize(1, pcd->points_num);
+
+	auto end1 = Now_ms();
+	qDebug() << "Select: " << end1 - start << "ms";
+
+	// å¹¶è¡Œfor
+	int num = pcd_->points_num < pcd->points_num ? pcd->points_num : pcd_->points_num;
+	omp_set_num_threads(8);
+#pragma omp parallel
+	{
+#pragma omp for
+		for (int i = 0; i < num; i++) {
+			// create New Pcd
+			if (i < pcd_->points_num) {
+				int targetIndex = indexlist[i];
+				int originIndex = pcd->indexTable[targetIndex];
+				pcd_->position.col(i) = pcd->position.col(originIndex);
+				pcd_->colors.col(i) = pcd->colors.col(originIndex);
+				pcd_->labels.col(i) = pcd->labels.col(originIndex);
+				pcd_->intensity.col(i) = pcd->intensity.col(originIndex);
+			}
+			// Update Old Pcd
+			if (i < pcd->points_num) {
+				int targetIndex = remainIndexlist[i];
+				int originIndex = pcd->indexTable[targetIndex];
+				position.col(i) = pcd->position.col(originIndex);
+				colors.col(i) = pcd->colors.col(originIndex);
+				labels.col(i) = pcd->labels.col(originIndex);
+				intensity.col(i) = pcd->intensity.col(originIndex);
+			}
+			//printf("i = %d, I am Thread %d\n", i, omp_get_thread_num());
+		}
+	}
+	// ************************ Old Pcd ***************************
+	pcd->position = position;
+	pcd->colors = colors;
+	pcd->labels = labels;
+	pcd->intensity = intensity;
+	// BoundingBox
+	Eigen::Vector3f minp = pcd->position.rowwise().minCoeff();
+	Eigen::Vector3f maxp = pcd->position.rowwise().maxCoeff();
+	pcd->boundingBox.extend(minp);
+	pcd->boundingBox.extend(maxp);
+	// Max Min Idensity
+	pcd->setmaxIdensity(pcd->intensity.rowwise().maxCoeff()(0, 0));
+	pcd->setminIdensity(pcd->intensity.rowwise().minCoeff()(0, 0));
+	// Index Table
+	delete pcd->indexTable;
+	pcd->indexTable = new uint32_t[pcd->points_num];
+
+	// ************************ New Pcd ***************************
+	pcd_->name = pcd->name + "-sub";
+	// BoundingBox
+	Eigen::Vector3f minp_ = pcd_->position.rowwise().minCoeff();
+	Eigen::Vector3f maxp_ = pcd_->position.rowwise().maxCoeff();
+	pcd_->boundingBox.extend(minp_);
+	pcd_->boundingBox.extend(maxp_);
+
+	// Max Min Idensity
+	pcd_->setmaxIdensity(pcd_->intensity.rowwise().maxCoeff()(0, 0));
+	pcd_->setminIdensity(pcd_->intensity.rowwise().minCoeff()(0, 0));
+	// Index Table
+	pcd_->indexTable = new uint32_t[pcd_->points_num];
+	// offset
+	pcd_->offset = pcd->offset;
+
+	auto end2 = Now_ms();
+	qDebug() << "creatPcd: " << end2 - end1 << "ms";
+
+	glDeleteBuffers(1, &selectBuffer);
+	selectBuffer = 0;
+
+	init();
+	currentAttributeMode = -1;
+
+	return pcd_;
+}
+
+// ä¸Šä¼ æ›´æ–°å±æ€§ä¿¡æ¯
+void ProgressiveRender::uploadAttribute(int AttributeMode) {
 	switch (AttributeMode) {
 	case FROM_RBG:{
 		auto color = pcd->colors;
@@ -354,7 +728,7 @@ void ProgressiveRender::uploadAttribute() {
 		upload->uploadChunkAttribute(labels.data(), 0, labels.cols());
 	}
 	break;
-	case FROM_IDENTISITY: {
+	case FROM_INTENSITY: {
 		auto idensity = pcd->intensity;
 		upload->uploadChunkAttribute(idensity.data(), 0, idensity.cols());
 		Eigen::MatrixXf colorStrip = getColorStrip();
@@ -364,6 +738,14 @@ void ProgressiveRender::uploadAttribute() {
 	default:
 		break;
 	}
-	currentAttributeMode = AttributeMode;
 }
 
+std::shared_ptr<PointCloud> ProgressiveRender::getCurrentPcd() {
+	return this->pcd;
+}
+
+// æ›´æ–°æ¸²æŸ“
+void ProgressiveRender::update() {
+	this->init();
+	uploadAttribute(this->pcd->getAttributeMode());
+}

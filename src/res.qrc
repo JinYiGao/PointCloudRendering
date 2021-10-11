@@ -17,8 +17,19 @@
         <file>PointCloud/images/polygon_in.png</file>
         <file>PointCloud/images/polygon_out.png</file>
         <file>PointCloud/images/segment.png</file>
-        <file>PointCloud/shaders/select.cs</file>
+        <file>PointCloud/shaders/segment.cs</file>
         <file>PointCloud/images/segment_deactive.png</file>
         <file>PointCloud/images/polygonSelect.png</file>
+        <file>PointCloud/shaders/resume_segment.cs</file>
+        <file>PointCloud/images/delete.png</file>
+        <file>PointCloud/images/add.png</file>
+        <file>PointCloud/images/Select.png</file>
+        <file>PointCloud/images/editProperty.png</file>
+        <file>PointCloud/images/No.png</file>
+        <file>PointCloud/images/Yes.png</file>
+        <file>PointCloud/shaders/select.cs</file>
+        <file>PointCloud/images/drawProfile.png</file>
+        <file>PointCloud/images/add_btn.png</file>
+        <file>PointCloud/images/subtract_btn.png</file>
     </qresource>
 </RCC>

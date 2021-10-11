@@ -1,4 +1,4 @@
-/*
+﻿/*
  * @Descripttion: 
  * @version: 
  * @Author: JinYiGao
@@ -18,14 +18,20 @@
 #include <QButtonGroup>
 #include <QToolButton>
 #include <QIcon>
+#include <QUndoStack>
+#include <QAction>
 
 #include <IO/lasio.h>
-#include <Main/DBRoot.h>
-#include <Main/segmentationwidget.h>
-#include <PointCloud/renderingWidget.h>
+
+class DBRoot;
+class PcdTreeWidget;
+class SegmentationWidget;
+class RenderWidget;
+class EditPropertyWidget;
+class ProfileWidget;
 
 namespace Ui {
-class MainWindow;
+	class MainWindow;
 }
  
 class MainWindow : public QMainWindow
@@ -36,26 +42,41 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-public slots:
+private slots:
 	void openfile();
+	void savefile();
 
 	void isEDLChecked();
 	void changeMSAA();
 
 	void start_segement();
+	void deletePcd();
+	void addPcdToOriginal();
+	void pickPoint();
+	void showEditWidget();
+	void applyEditProperty(int classification);
+	void quitEdit();
+
+	void start_drawProfile();
 
 	void enableUIItems();
 
 private:
-	QToolButton *toolbtn_segment = new QToolButton(this);
-
-public:
 	Ui::MainWindow *ui;
 	SegmentationWidget *segmentationWidget = nullptr;
+	EditPropertyWidget *editPropertyWidget = nullptr;
+	ProfileWidget *profileWidget = nullptr;
 
 	RenderWidget *renderWidget = nullptr;
 	PcdTreeWidget *pcdTreeWidget = nullptr;
 	DBRoot *dbRoot = nullptr;
+	QUndoStack *undoStack = nullptr;
+	QAction *undoAction = nullptr;
+	QAction *redoAction = nullptr;
+
+public:
+	static MainWindow *mainWindow; // 全局变量 获取MainWindow实例化指针
+	QUndoStack* getUndoStack();
 };
 
 #endif // MAINWINDOW_H

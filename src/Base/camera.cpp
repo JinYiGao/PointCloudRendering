@@ -70,6 +70,10 @@ Eigen::Matrix4f Camera::frustum(float left, float right, float bottom, float top
 	return result;
 }
 
+void Camera::setPreTransform(Eigen::Matrix4f preTransform) {
+	this->preTransform = preTransform;
+}
+
 //获得缩放矩阵
 Eigen::Matrix4f scale(const Eigen::Vector3f &v) 
 { 
@@ -86,7 +90,7 @@ Eigen::Matrix4f translate(const Eigen::Vector3f &v)
 Eigen::Matrix4f Camera::createModel(Eigen::Matrix4f rotation, Eigen::Vector3f translation, float zoom)
 {
 	//先旋转 后平移
-	Eigen::Matrix4f model = translate(translation) * rotation * scale(Eigen::Vector3f::Constant(zoom));
+	Eigen::Matrix4f model = scale(Eigen::Vector3f::Constant(zoom)) * translate(translation) *  rotation * preTransform;
 	return model;
 }
 
@@ -108,7 +112,6 @@ std::tuple<Eigen::Matrix4f, Eigen::Matrix4f, Eigen::Matrix4f> Camera::get_mvp()
 
 	Eigen::Matrix4f rotation = arcball.matrix();
 	//std::cout << arcball.state().matrix() << std::endl;
-	view = view;
 	//模型矩阵理论上应该包含物体最初的 平移 旋转 缩放 状态
 	//控制相机视角下 模型的状态 不影响实际坐标 实际模型坐标由另一个模型矩阵来进行控制
 	model = createModel(rotation, model_translation, zoom);
@@ -126,6 +129,30 @@ Eigen::Matrix4f Camera::getTransform()
 	return  proj * view * model;
 }
 
+// 屏幕坐标转opengl 3d坐标
+Eigen::Vector3f Camera::convert_2dTo3d(const Eigen::Vector2f &screen_point) {
+	// 标准化坐标
+	Vector4f screen2d;
+	screen2d.x() = screen_point.x() / (float) size.x() * 2 - 1.0;
+	screen2d.y() = -screen_point.y() / (float)size.y() * 2 + 1.0;
+
+	std::tuple<Eigen::Matrix4f, Eigen::Matrix4f, Eigen::Matrix4f> mvp = get_mvp();
+	Eigen::Matrix4f model = this->createModel(Eigen::Matrix4f::Identity(), Eigen::Vector3f::Identity(), this->zoom);
+	Eigen::Matrix4f view = std::get<1>(mvp);
+	Eigen::Matrix4f proj = std::get<2>(mvp);
+	auto center = this->scene_bbox.center();
+	Vector4f tmp;
+	tmp << center, 1.0;
+	auto center3d = (proj * view * std::get<0>(mvp) * tmp);
+	screen2d.z() = center3d.z();
+	screen2d.w() = center3d.w();
+	auto inverse = (proj * view * model).inverse();
+	Eigen::Vector4f screen3d = inverse * screen2d;
+	screen3d /= screen3d.w();
+
+	return screen3d.head(3);
+}
+
 void Camera::start_translate(const Vector2f &screen_point)
 {
 	M_start_translate = screen_point;
@@ -136,19 +163,15 @@ void Camera::motion_translate(const Vector2f &screen_point)
 {
 	if (is_translate)
 	{
-		Vector2f translate = screen_point - M_start_translate;
-		Vector3f tran = { translate.x(),-translate.y(),0.0f };
-		tran *= sensitivity;
-		//通过变换相机位置 达到上下左右平移的效果
-		//Eigen::Vector3f targetVec = target - position; //环绕移动
+		//Vector2f translate = screen_point - M_start_translate;
+		//Vector3f tran = { translate.x(),-translate.y(),0.0f };
+		//tran *= sensitivity;
 
-		//Eigen::Vector3f rightVec = target.cross(up).normalized();
-		//position += rightVec * tran.x();//左右移动
-		//position += up * tran.y();//上下移动
-		//target = up.cross(rightVec);
-
+		Vector3f translate = convert_2dTo3d(screen_point) - convert_2dTo3d(M_start_translate);
+		//Vector3f tran = { translate.x(),translate.y(),0.0f };
+		//std::cout << translate << std::endl;
 		// 平移物体
-		model_translation += tran;
+		model_translation += translate;
 		M_start_translate = screen_point;
 	}
 }

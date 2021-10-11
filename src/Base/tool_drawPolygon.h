@@ -15,15 +15,6 @@ using std::vector;
 
 class RenderWidget;
 
-struct Point {
-	float x;
-	float y;
-	Point(float x, float y) {
-		this->x = x;
-		this->y = y;
-	}
-};
-
 class ToolDrawPolygon :public Tool {
 	Q_OBJECT
 public:
@@ -32,7 +23,7 @@ public:
 
 public:
 	vector<Point> polygon;
-	bool enable = false;  // 是否启用工具
+	bool isActivate = false;  // 是否启用工具
 
 protected:
 	bool drawing = false; // 是否处于绘制状态
@@ -57,4 +48,6 @@ public:
 	void mousePress(QMouseEvent *e) override;
 	void mouseMove(QMouseEvent *e) override;
 	void mouseDoubleClick(QMouseEvent *e) override;
+	// 键盘操作
+	void keyPress(QKeyEvent *e) override;
 };

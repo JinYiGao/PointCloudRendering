@@ -22,7 +22,7 @@ struct VertexT{
 	int show;
 };
 
-// 使用纹理存储通用数据  *** 参考: OpenGL编程指南 p436 ***
+// 使用纹理存储通用数据  *** 参考: OpenGL编程指南 P436 ***
 layout(rgba8ui) uniform uimage2D uIndices;
 
 // 间接绘制命令缓冲

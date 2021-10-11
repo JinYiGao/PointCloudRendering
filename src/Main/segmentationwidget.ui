@@ -35,8 +35,8 @@
       <string>...</string>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>../PointCloud/images/polygonSelect.png</normaloff>../PointCloud/images/polygonSelect.png</iconset>
+      <iconset resource="../res.qrc">
+       <normaloff>:/PointCloud/images/polygonSelect.png</normaloff>:/PointCloud/images/polygonSelect.png</iconset>
      </property>
      <property name="popupMode">
       <enum>QToolButton::MenuButtonPopup</enum>
@@ -49,8 +49,8 @@
       <string>...</string>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>../PointCloud/images/polygon_in.png</normaloff>../PointCloud/images/polygon_in.png</iconset>
+      <iconset resource="../res.qrc">
+       <normaloff>:/PointCloud/images/polygon_in.png</normaloff>:/PointCloud/images/polygon_in.png</iconset>
      </property>
     </widget>
    </item>
@@ -60,8 +60,8 @@
       <string>...</string>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>../PointCloud/images/polygon_out.png</normaloff>../PointCloud/images/polygon_out.png</iconset>
+      <iconset resource="../res.qrc">
+       <normaloff>:/PointCloud/images/polygon_out.png</normaloff>:/PointCloud/images/polygon_out.png</iconset>
      </property>
     </widget>
    </item>
@@ -71,8 +71,8 @@
       <string>...</string>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>../PointCloud/images/check_active.png</normaloff>../PointCloud/images/check_active.png</iconset>
+      <iconset resource="../res.qrc">
+       <normaloff>:/PointCloud/images/check_active.png</normaloff>:/PointCloud/images/check_active.png</iconset>
      </property>
     </widget>
    </item>
@@ -82,13 +82,15 @@
       <string>...</string>
      </property>
      <property name="icon">
-      <iconset>
-       <normaloff>../PointCloud/images/cancel.png</normaloff>../PointCloud/images/cancel.png</iconset>
+      <iconset resource="../res.qrc">
+       <normaloff>:/PointCloud/images/cancel.png</normaloff>:/PointCloud/images/cancel.png</iconset>
      </property>
     </widget>
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../res.qrc"/>
+ </resources>
  <connections/>
 </ui>

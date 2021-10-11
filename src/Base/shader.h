@@ -25,16 +25,19 @@ public:
 	GLuint programId; //着色器程序ID
 	
 public:
-	Shader(); 
+	Shader();
+	~Shader();
 
 	Shader(const QString &computerShaderFileName);
 
 	Shader(const QString &vertShaderFileName,const QString &fragShaderFilename);
 
+	bool compileShaderFromSourceCode(const char *vertShaderSource, const char *fragShaderSource);
+
 	///绑定着色器
 	bool bind();
 	///解绑着色器
-	void release();
+	void unbind();
 
 	///setUniform Matrix4x4
 	template <typename T>

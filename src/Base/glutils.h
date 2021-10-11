@@ -26,7 +26,11 @@ struct UniformBlock : protected QOpenGLFunctions_4_5_Core {
 		this->name = name;
 		glCreateBuffers(1, &buffer);// 创建uniform block缓冲区
 	}
+	~UniformBlock() {
+		glDeleteBuffers(1, &buffer);
+	}
 };
+
 
 // 根据OpenGL Type编码获取类型占字节
 static size_t TypeSize(GLenum type) {

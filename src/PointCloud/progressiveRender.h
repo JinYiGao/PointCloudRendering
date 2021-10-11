@@ -9,7 +9,9 @@
 
 #pragma once
 #include <iostream>
+#include <memory>
 #include <QOpenGlFunctions_4_5_Core>
+#include <QStack>
 
 #include <Base/shader.h>
 #include <Base/texture.h>
@@ -24,6 +26,7 @@
 class RenderWidget;
 struct Point;
 struct Window;
+
 // 渐进渲染 渲染状态管理(一些可能经常变的量)
 struct ProgressiveRenderState : protected QOpenGLFunctions_4_5_Core {
 	GLBuffer *reprojectBuffer; // 重投影数据缓冲管理
@@ -55,21 +58,38 @@ struct ProgressiveRenderState : protected QOpenGLFunctions_4_5_Core {
 
 		fillOffset = 0;
 	}
+
+	~ProgressiveRenderState() {
+		delete reprojectBuffer;
+		glDeleteBuffers(1, &IndirectCommand);
+	}
 };
 
 class ProgressiveRender : protected QOpenGLFunctions_4_5_Core {
 public:
-	ProgressiveRender(RenderWidget *glWidget, PointCloud *pcd);
+	ProgressiveRender(RenderWidget *glWidget, std::shared_ptr<PointCloud> &pcd);
 	~ProgressiveRender();
 
 public:
-	std::string name;
+	QString name;
 
 public:
+	// Get
+	std::shared_ptr<PointCloud> getCurrentPcd(); // 获取当前渲染的点云
+
 	// 1 渐进方式渲染
 	void renderPointCloudProgressive();
 
-	void Segment(vector<Point> polygon); // 控制裁剪
+	void Segment(vector<Point> polygon, int Selectmode = 0, Eigen::Matrix4f segmentTransform = Eigen::Matrix4f::Identity()); // 裁剪
+	void resumeSegment(); // 恢复裁剪区域
+	std::shared_ptr<PointCloud> createPcdFromBuffer(); // 根据selectbuffer生成新点云
+
+	vector<uint> selectPointsByPolygon(vector<Point> polygon);
+	vector<int> selectPointsByPolyline(vector<Point> polyline, vector<Point> &gridPolyline);
+
+	void uploadAttribute(int AttributeMode); // 上传更新属性信息
+
+	void update(); // 更新渲染
 
 protected:
 	// 初始化上载点云
@@ -81,15 +101,13 @@ protected:
 
 	ProgressiveRenderState* getRenderState(); // 获取渐进方式渲染状态信息
 
-	void uploadAttribute(); // 上传更新属性信息
-
 protected:
 	RenderWidget *glWidget = nullptr;
 	FrameBuffer *fbo = nullptr; // 离屏绘制到的帧缓冲
 	Camera *camera = nullptr;
 	Window *window = nullptr;
 
-	PointCloud *pcd = nullptr; // 点云信息
+	std::shared_ptr<PointCloud> pcd = nullptr; // 点云信息
 	UpLoader *upload = nullptr; // 点云数据上载GPU模块
 
 	vector<GLBuffer*> pointcloudBuffers; // 大型点云分块缓冲管理
@@ -103,9 +121,14 @@ protected:
 	Shader *createVBOShader = nullptr; // 创建重投影VBO着色器
 
 	Shader *SegmentShader = nullptr; // 裁剪着色器
+	Shader *resumeSegmentShader = nullptr; // 恢复裁剪着色器
+
+	Shader *selectShader = nullptr; // 区域选择着色器
 
 	vector<UniformBlock*> uniformBlocks; // uniform块管理
 
 	int currentAttributeMode = -1;
+
 	// ------------------------------------------------------------------------------------------------------------------------------- 
+	QStack<GLuint> selectBufferStack; // 存储裁剪时选择的点索引(打乱后)
 };

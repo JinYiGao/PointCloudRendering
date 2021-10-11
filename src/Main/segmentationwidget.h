@@ -2,6 +2,7 @@
 #define SEGMENTATIONWIDGET_H
 
 #include <QDialog>
+#include <memory>
 
 #include <PointCloud/renderingWidget.h>
 #include <Main/DBRoot.h>

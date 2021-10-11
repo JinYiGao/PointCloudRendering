@@ -3,7 +3,7 @@
 #define ATT_MODE_SCALAR 0
 #define ATT_MODE_VECTOR 1
 #define SHOW_COLORFROMLABEL 2
-#define SHOW_COLORFROMIDENSITY 3
+#define SHOW_COLORFROMINTENSITY 3
 #define NOT_SHOW_COLOR 4
 
 layout(location = 0) in vec3 aPosition; // 顶点位置
@@ -89,7 +89,7 @@ vec3 getColorFromLabels(){
 
 // mode = 4
 // 根据强度着色
-vec3 getColorFromIdensity(){
+vec3 getColorFromIntensity(){
 	vec3 v = vec3(1.0,1.0,1.0);
 	if(colorstrip.maxValue == 0 && colorstrip.minValue == 0){
 		return v;
@@ -102,6 +102,7 @@ vec3 getColorFromIdensity(){
 
 void main() {
 	gl_Position = uWorldViewProj * vec4(aPosition, 1.0);
+	
 	gl_PointSize = pointSize;
 
 	if(uAttributeMode == ATT_MODE_VECTOR){
@@ -115,8 +116,8 @@ void main() {
 	else if(uAttributeMode == SHOW_COLORFROMLABEL){
 		vColor = getColorFromLabels();
 	}
-	else if(uAttributeMode == SHOW_COLORFROMIDENSITY){
-		vColor = getColorFromIdensity();
+	else if(uAttributeMode == SHOW_COLORFROMINTENSITY){
+		vColor = getColorFromIntensity();
 	}
 	
 	uint index = uint(aIndex);
