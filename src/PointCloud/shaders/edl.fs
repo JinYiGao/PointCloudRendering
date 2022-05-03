@@ -66,7 +66,8 @@ void main() {
 	vec4 col = texelFetch(uColor, pos, 0);
 
 	//out_color = 0.01 * col * shade + vec4(1, 1, 1, 1) * shade;
+
 	out_color = col * shade;
-	// out_color = texelFetch(uDepth, pos, 0);
+	// out_color = vec4(texelFetch(uDepth, pos, 0).r, 0.0, 0.0, 1.0);
 	// out_color = vec4(0.2,0.3,0.4,1.0);
 }

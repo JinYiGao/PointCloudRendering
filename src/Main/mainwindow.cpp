@@ -70,6 +70,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect(ui->save, SIGNAL(triggered()), this, SLOT(savefile()));
 	connect(ui->isEDL, SIGNAL(stateChanged(int)), this, SLOT(isEDLChecked()));
 	connect(ui->val_MSAA, SIGNAL(valueChanged(int)), this, SLOT(changeMSAA()));
+	connect(ui->val_Budget, SIGNAL(valueChanged(int)), this, SLOT(changeBudget()));
 	
 	connect(ui->toolbtn_segment, SIGNAL(triggered()), this, SLOT(start_segement())); // 打开裁剪 删除框选部分点云
 	connect(ui->toolbtn_delete, SIGNAL(triggered()), this, SLOT(deletePcd())); // delete pointcloud 
@@ -129,6 +130,15 @@ void MainWindow::changeMSAA() {
 		return;
 	}
 	renderWidget->setMSAAsamples(value);
+}
+
+// 修改填充预算
+void MainWindow::changeBudget() {
+	int budget = ui->val_Budget->value();
+	auto proRenderlist = this->renderWidget->getRenderList();
+	for (int i = 0; i < proRenderlist.size(); i++) {
+		proRenderlist[i]->setBudget(budget);
+	}
 }
 
 // DBTree改变时有一些ui的变化

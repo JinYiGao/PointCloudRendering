@@ -48,6 +48,7 @@ private slots:
 
 	void isEDLChecked();
 	void changeMSAA();
+	void changeBudget();
 
 	void start_segement();
 	void deletePcd();

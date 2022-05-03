@@ -76,6 +76,7 @@ public:
 public:
 	// Get
 	std::shared_ptr<PointCloud> getCurrentPcd(); // 获取当前渲染的点云
+	void setBudget(int budget); // 设置填充预算
 
 	// 1 渐进方式渲染
 	void renderPointCloudProgressive();
@@ -128,6 +129,8 @@ protected:
 	vector<UniformBlock*> uniformBlocks; // uniform块管理
 
 	int currentAttributeMode = -1;
+
+	int budget = 1000000; // fill budget
 
 	// ------------------------------------------------------------------------------------------------------------------------------- 
 	QStack<GLuint> selectBufferStack; // 存储裁剪时选择的点索引(打乱后)

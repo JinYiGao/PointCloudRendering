@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <Eigen/Eigen>
+#include <memory>
 
 typedef Eigen::AlignedBox3f BoundingBox3f;
 

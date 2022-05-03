@@ -8,6 +8,7 @@
  */
 #pragma once
 
+#include <Base/common.h>
 #include <QMouseEvent>
 #include <QObject>
 #include <QOpenGLFunctions_4_5_Core>

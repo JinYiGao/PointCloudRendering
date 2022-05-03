@@ -22,7 +22,7 @@
      <x>0</x>
      <y>0</y>
      <width>1056</width>
-     <height>22</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -75,9 +75,6 @@
        </property>
        <item>
         <widget class="PcdTreeWidget" name="treeWidget">
-         <property name="frameShape">
-          <enum>QFrame::Box</enum>
-         </property>
          <attribute name="headerVisible">
           <bool>false</bool>
          </attribute>
@@ -128,9 +125,6 @@
     <layout class="QVBoxLayout" name="verticalLayout_4">
      <item>
       <widget class="QTreeView" name="propertiesView">
-       <property name="frameShape">
-        <enum>QFrame::Box</enum>
-       </property>
        <property name="editTriggers">
         <set>QAbstractItemView::NoEditTriggers</set>
        </property>
@@ -177,17 +171,7 @@
         <string>Options</string>
        </property>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="1" column="1">
-         <widget class="QSpinBox" name="val_MSAA">
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>16</number>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0" colspan="3">
+        <item row="0" column="0" colspan="2">
          <widget class="QCheckBox" name="isEDL">
           <property name="font">
            <font>
@@ -199,7 +183,41 @@
           </property>
          </widget>
         </item>
-        <item row="4" column="0" colspan="3">
+        <item row="1" column="0">
+         <widget class="QLabel" name="label">
+          <property name="text">
+           <string>MSAA:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="val_MSAA">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>16</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Budget:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QSpinBox" name="val_Budget">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>1000000</number>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0" colspan="2">
          <spacer name="verticalSpacer">
           <property name="orientation">
            <enum>Qt::Vertical</enum>
@@ -211,13 +229,6 @@
            </size>
           </property>
          </spacer>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>MSAA:</string>
-          </property>
-         </widget>
         </item>
        </layout>
       </widget>
@@ -261,11 +272,7 @@
    <widget class="QWidget" name="dockWidgetContents_3">
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
-      <widget class="QUndoView" name="undoView">
-       <property name="frameShape">
-        <enum>QFrame::Box</enum>
-       </property>
-      </widget>
+      <widget class="QUndoView" name="undoView" native="true"/>
      </item>
     </layout>
    </widget>
@@ -282,7 +289,7 @@
   </action>
   <action name="toolbtn_segment">
    <property name="icon">
-    <iconset>
+    <iconset resource="../res.qrc">
      <normaloff>:/PointCloud/images/segment.png</normaloff>
      <normalon>:/PointCloud/images/segment.png</normalon>:/PointCloud/images/segment.png</iconset>
    </property>
@@ -295,7 +302,7 @@
   </action>
   <action name="toolbtn_delete">
    <property name="icon">
-    <iconset>
+    <iconset resource="../res.qrc">
      <normaloff>:/PointCloud/images/delete.png</normaloff>:/PointCloud/images/delete.png</iconset>
    </property>
    <property name="text">
@@ -317,7 +324,7 @@
   </action>
   <action name="toolbtn_add">
    <property name="icon">
-    <iconset>
+    <iconset resource="../res.qrc">
      <normaloff>:/PointCloud/images/add.png</normaloff>:/PointCloud/images/add.png</iconset>
    </property>
    <property name="text">
@@ -329,7 +336,7 @@
   </action>
   <action name="toolbtn_pick">
    <property name="icon">
-    <iconset>
+    <iconset resource="../res.qrc">
      <normaloff>:/PointCloud/images/Select.png</normaloff>:/PointCloud/images/Select.png</iconset>
    </property>
    <property name="text">
@@ -341,7 +348,7 @@
   </action>
   <action name="toolbtn_edit">
    <property name="icon">
-    <iconset>
+    <iconset resource="../res.qrc">
      <normaloff>:/PointCloud/images/editProperty.png</normaloff>:/PointCloud/images/editProperty.png</iconset>
    </property>
    <property name="text">
@@ -353,7 +360,7 @@
   </action>
   <action name="toolbtn_drawProfile">
    <property name="icon">
-    <iconset>
+    <iconset resource="../res.qrc">
      <normaloff>:/PointCloud/images/drawProfile.png</normaloff>:/PointCloud/images/drawProfile.png</iconset>
    </property>
    <property name="text">
@@ -369,6 +376,11 @@
    <class>PcdTreeWidget</class>
    <extends>QTreeWidget</extends>
    <header location="global">Main/DBRoot.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QUndoView</class>
+   <extends>QWidget</extends>
+   <header>qundoview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

@@ -214,7 +214,6 @@ void ProgressiveRender::fillFixed() {
 	fillShader->setUniformValue("pointSize", pointSize);
 
 	// 
-	int budget = 1000000; // 
 	int numPoints = pcd->points_num; // 
 	if (pointcloudBuffers.size() == 1) {
 		GLBuffer *pcdBuffer = pointcloudBuffers[0];
@@ -748,4 +747,9 @@ std::shared_ptr<PointCloud> ProgressiveRender::getCurrentPcd() {
 void ProgressiveRender::update() {
 	this->init();
 	uploadAttribute(this->pcd->getAttributeMode());
+}
+
+// 设置填充预算
+void ProgressiveRender::setBudget(int budget) {
+	this->budget = budget;
 }
